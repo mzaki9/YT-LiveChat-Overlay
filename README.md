@@ -10,6 +10,13 @@ The YouTube Live Chat Overlay is a browser extension that adds a customizable li
 <a href="https://addons.mozilla.org/id/firefox/addon/youtube-live-chat-overlay/"><img src="https://user-images.githubusercontent.com/585534/107280546-7b9b2a00-6a26-11eb-8f9f-f95932f4bfec.png" alt="Get YT Livechat overlay for Firefox"></a>
 </p>
 
+***
+
+## Screenshot
+
+![YouTube Live Chat Overlay Screenshot](img/Screenshot.png)
+
+
 
 ## Features
 
