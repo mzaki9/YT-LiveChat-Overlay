@@ -1,0 +1,129 @@
+#overlay-chat-container {
+  display: none;
+  position: absolute;
+  top: 10%;
+  right: 5%;
+  width: 25%;
+  height: 80%;
+  background-color: rgba(0, 0, 0, 0.3); /* Increased transparency */
+  z-index: 2147483647;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); /* Adjusted for consistency */
+}
+
+#drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background-color: rgba(0, 0, 0, 0.4);
+  cursor: move;
+}
+
+#chat-messages-container {
+  height: calc(100% - 20px);
+  overflow-y: auto;
+  margin-top: 20px;
+  padding: 10px;
+}
+
+#toggle-chat-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2147483648;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: none;
+}
+
+.chat-message {
+  background-color: rgba(0, 0, 0, 0);
+  border-radius: 4px;
+  margin-bottom: 4px; /* Reduced from 8px */
+  padding: 4px; /* Reduced from 8px */
+  color: white;
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chat-message-profile {
+  width: 20px; /* Slightly reduced from 24px */
+  height: 20px; /* Slightly reduced from 24px */
+  border-radius: 50%;
+  margin-right: 6px; /* Slightly reduced from 8px */
+  flex-shrink: 0;
+}
+
+.chat-message-content {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+  align-items: flex-start;
+}
+
+.chat-message-author {
+  font-weight: bold;
+  margin-right: 6px; /* Slightly reduced from 8px */
+  white-space: nowrap;
+}
+
+.chat-message-text {
+  flex-grow: 1;
+  word-break: break-word;
+}
+
+.chat-badge {
+  width: 14px; /* Slightly reduced from 16px */
+  height: 14px; /* Slightly reduced from 16px */
+  margin-right: 3px; /* Slightly reduced from 4px */
+  vertical-align: middle;
+}
+
+.author-member {
+  color: #2ba640;
+}
+
+.author-moderator {
+  color: #5e84f1;
+}
+
+#resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15px;
+  height: 15px;
+  background-color: rgba(255, 255, 255, 0.2);
+  cursor: nwse-resize;
+  z-index: 2147483649; /* Ensure it is above other elements */
+  pointer-events: auto; /* Ensure the resizer can be clicked */
+}
+
+/* Styling the scrollbar for webkit browsers */
+#chat-messages-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chat-messages-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+#chat-messages-container::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+/* For Firefox */
+#chat-messages-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.1);
+}

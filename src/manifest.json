@@ -1,0 +1,25 @@
+{
+    "manifest_version": 2,
+    "name": "YouTube Live Chat Overlay",
+    "version": "1.0",
+    "description": "Display YouTube live chat as an overlay in fullscreen mode",
+    "icons": {
+      "48": "icon.png"
+    },
+    "permissions": [  
+      "activeTab",
+      "https://www.youtube.com/*"
+    ],
+    "content_scripts": [
+      {
+        "matches": ["*://*.youtube.com/*"],
+        "js": ["content.js"],
+        "css": ["styles.css"],
+        "run_at": "document_idle"
+      }
+    ],
+    "browser_action": {
+      "default_icon": "icon.png",
+      "default_title": "YouTube Live Chat Overlay"
+    }
+  }
