@@ -50,7 +50,3 @@ The extension's settings can be accessed by clicking the extension icon in your 
 - The extension only works on YouTube videos and live streams, not on other websites.
 - The extension may not work with certain YouTube video players or layouts.
 - The extension is not officially supported by YouTube and may stop working due to changes in the YouTube website.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
