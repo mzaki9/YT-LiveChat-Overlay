@@ -45,16 +45,15 @@
 }
 
 .chat-message {
+  display: flex;
+  align-items: center;
+  width: 100%;
   background-color: rgba(0, 0, 0, 0);
   box-sizing: border-box;
   border-radius: 4px;
   margin-bottom: 8px;
-  padding: 8px;
+  padding: 3px;
   color: white;
-  display: flex;
-  align-items: center;
-  width: 100%;
-
 }
 
 .chat-message-profile {
@@ -67,9 +66,9 @@
 
 .chat-message-content {
   display: flex;
+  flex-direction: row;
   align-items: center;
   flex-grow: 1;
-
 }
 
 .chat-message-author {
@@ -83,6 +82,7 @@
 .chat-message-text {
   word-break: break-word;
 }
+
 
 .chat-badge {
   width: 16px;
