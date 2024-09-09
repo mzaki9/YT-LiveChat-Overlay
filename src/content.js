@@ -67,52 +67,28 @@ function injectLiveChatOverlay() {
       );
       const messageElement = item.querySelector("#message").cloneNode(true);
 
-      const authorClass = item.querySelector("#author-name.member")
-        ? "author-member"
-        : item.querySelector("#author-name.moderator")
-        ? "author-moderator"
-        : "";
+      const authorClass = getChatMessageAuthorClass(item);
 
-      // Create the chat message element without using innerHTML
-      const chatMessageElement = document.createElement("div");
-      chatMessageElement.className = "chat-message";
+      const chatMessageElement = createChatMessageElement(
+        authorName,
+        authorPhoto,
+        badgeElement?.src,
+        messageElement,
+        authorClass
+      );
 
-      const profileImg = document.createElement("img");
-      profileImg.className = "chat-message-profile";
-      profileImg.src = authorPhoto;
-      profileImg.alt = authorName;
-      chatMessageElement.appendChild(profileImg);
-
-      const chatMessageContent = document.createElement("div");
-      chatMessageContent.className = "chat-message-content";
-      chatMessageElement.appendChild(chatMessageContent);
-
-      const chatMessageAuthor = document.createElement("div");
-      chatMessageAuthor.className = `chat-message-author ${authorClass}`;
-      chatMessageContent.appendChild(chatMessageAuthor);
-
-      if (badgeElement) {
-        const badgeImg = document.createElement("img");
-        badgeImg.className = "chat-badge";
-        badgeImg.src = badgeElement.src;
-        badgeImg.alt = "Badge";
-        chatMessageAuthor.appendChild(badgeImg);
-      }
-
-      const authorText = document.createTextNode(authorName);
-      chatMessageAuthor.appendChild(authorText);
-
-      // Append the cloned message element to the content
-      chatMessageContent.appendChild(messageElement);
-
-      // Append the chat message to the fragment
       fragment.appendChild(chatMessageElement);
     });
 
-    chatMessagesContainer.innerHTML = "";
-    chatMessagesContainer.appendChild(fragment);
-    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    requestAnimationFrame(() => {
+      chatMessagesContainer.innerHTML = "";
+      chatMessagesContainer.appendChild(fragment);
+      chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    });
   }
+
+  // Debounce the updateChatMessages function
+  const debouncedUpdateChatMessages = debounce(updateChatMessages, 500);
 
   // Function to make the overlay draggable
   function makeDraggable(element) {
@@ -167,7 +143,6 @@ function injectLiveChatOverlay() {
   }
 
   // Function to make the overlay resizable
-
   function makeResizable(element) {
     const resizer = document.getElementById("resize-handle");
     let isResizing = false;
@@ -215,9 +190,9 @@ function injectLiveChatOverlay() {
     overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
 
     if (isOverlayVisible) {
-      updateChatMessages();
+      debouncedUpdateChatMessages();
       clearInterval(updateInterval);
-      updateInterval = setInterval(updateChatMessages, 1000); // Update every 3 seconds
+      updateInterval = setInterval(debouncedUpdateChatMessages, 800);
     } else {
       clearInterval(updateInterval);
     }
@@ -242,9 +217,9 @@ function injectLiveChatOverlay() {
             ? "block"
             : "none";
           if (isOverlayVisible) {
-            updateChatMessages();
+            debouncedUpdateChatMessages();
             clearInterval(updateInterval);
-            updateInterval = setInterval(updateChatMessages, 3000);
+            updateInterval = setInterval(debouncedUpdateChatMessages, 800);
           }
         }
         console.log("YouTube Live Chat Overlay: Entered fullscreen");
@@ -277,14 +252,13 @@ function initializeOverlayState() {
     isOverlayVisible = savedState === "true";
     overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
     if (isOverlayVisible && document.fullscreenElement) {
-      updateChatMessages();
+      debouncedUpdateChatMessages();
       clearInterval(updateInterval);
-      updateInterval = setInterval(updateChatMessages, 3000);
+      updateInterval = setInterval(debouncedUpdateChatMessages, 800);
     }
   }
 }
 
-// Function to clean up previous overlay
 function cleanupOverlay() {
   const existingOverlay = document.getElementById("overlay-chat-container");
   const existingToggleButton = document.getElementById("toggle-chat-overlay");
@@ -329,3 +303,54 @@ const observer = new MutationObserver((mutations) => {
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
+
+function createChatMessageElement(
+  authorName,
+  authorPhoto,
+  badgeUrl,
+  messageElement,
+  authorClass
+) {
+  const chatMessageElement = document.createElement("div");
+  chatMessageElement.className = "chat-message";
+
+  const profileImg = document.createElement("img");
+  profileImg.className = "chat-message-profile";
+  profileImg.src = authorPhoto;
+  profileImg.alt = authorName;
+  chatMessageElement.appendChild(profileImg);
+
+  const chatMessageContent = document.createElement("div");
+  chatMessageContent.className = "chat-message-content";
+  chatMessageElement.appendChild(chatMessageContent);
+
+  const chatMessageAuthor = document.createElement("div");
+  chatMessageAuthor.className = `chat-message-author ${authorClass}`;
+  chatMessageContent.appendChild(chatMessageAuthor);
+
+  if (badgeUrl) {
+    const badgeImg = document.createElement("img");
+    badgeImg.className = "chat-badge";
+    badgeImg.src = badgeUrl;
+    badgeImg.alt = "Badge";
+    chatMessageAuthor.appendChild(badgeImg);
+  }
+
+  const authorText = document.createTextNode(authorName);
+  chatMessageAuthor.appendChild(authorText);
+
+  // Append the cloned message element to the content
+  chatMessageContent.appendChild(messageElement);
+
+  return chatMessageElement;
+}
+
+function getChatMessageAuthorClass(item) {
+  const authorNameElement = item.querySelector("#author-name");
+  if (authorNameElement.classList.contains("member")) {
+    return "author-member";
+  } else if (authorNameElement.classList.contains("moderator")) {
+    return "author-moderator";
+  }
+  return "";
+}
