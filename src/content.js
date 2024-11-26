@@ -1,23 +1,16 @@
-console.log("YouTube Live Chat Overlay: Content script loaded");
-
 let updateInterval;
 let isOverlayVisible = false;
 let videoPlayer, liveChatFrame, overlayChatContainer, chatMessagesContainer;
 
 function injectLiveChatOverlay() {
-  console.log("YouTube Live Chat Overlay: Attempting to inject overlay");
-
   videoPlayer = document.querySelector(".html5-video-player");
   liveChatFrame =
     document.querySelector("#chat-frame") ||
     document.querySelector("iframe#chatframe");
 
   if (!videoPlayer || !liveChatFrame) {
-    console.error("YouTube Live Chat Overlay: Required elements not found");
     return;
   }
-
-  console.log("YouTube Live Chat Overlay: Required elements found");
 
   // Inject CSS
   const linkElement = document.createElement("link");
@@ -32,6 +25,54 @@ function injectLiveChatOverlay() {
   const dragHandle = document.createElement("div");
   dragHandle.id = "drag-handle";
   overlayChatContainer.appendChild(dragHandle);
+
+  // Add settings icon
+  const settingsIcon = document.createElement("div");
+  settingsIcon.id = "settings-icon";
+  settingsIcon.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16">
+    <path fill="currentColor" d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+  </svg>`;
+  dragHandle.appendChild(settingsIcon);
+
+  // Add settings panel
+  const settingsPanel = document.createElement("div");
+  settingsPanel.id = "settings-panel";
+  settingsPanel.innerHTML = `
+    <div class="opacity-control">
+      <label>Opacity:</label>
+      <input type="range" min="10" max="100" value="50" id="opacity-slider">
+    </div>
+  `;
+  overlayChatContainer.appendChild(settingsPanel);
+
+  // Initialize opacity after adding the panel to DOM
+  const savedOpacity = localStorage.getItem("chatOverlayOpacity") || 50;
+  const opacityControl = settingsPanel.querySelector(".opacity-control");
+  const opacitySlider = opacityControl.querySelector("#opacity-slider");
+
+  if (opacitySlider) {
+    opacitySlider.value = savedOpacity;
+    overlayChatContainer.style.backgroundColor = `rgba(0, 0, 0, ${savedOpacity / 100})`;
+    overlayChatContainer.style.transition = "background-color 0.1s ease"; // Reduced transition time
+
+    opacitySlider.addEventListener("input", handleOpacityChange);
+  }
+
+  // Handle settings interaction
+  let isSettingsPanelVisible = false;
+  settingsIcon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    isSettingsPanelVisible = !isSettingsPanelVisible;
+    settingsPanel.classList.toggle("show", isSettingsPanelVisible);
+  });
+
+  // Close settings panel when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!settingsPanel.contains(e.target) && !settingsIcon.contains(e.target)) {
+      isSettingsPanelVisible = false;
+      settingsPanel.classList.remove("show");
+    }
+  });
 
   chatMessagesContainer = document.createElement("div");
   chatMessagesContainer.id = "chat-messages-container";
@@ -50,6 +91,9 @@ function injectLiveChatOverlay() {
   videoPlayer.appendChild(toggleButton);
 
   // Function to extract and display chat messages
+  let lastMessageId = null; // Track the last processed message
+  const MAX_MESSAGES = 100; // Maximum number of messages to display
+
   function updateChatMessages() {
     const chatDocument = liveChatFrame.contentDocument;
     if (!chatDocument) return;
@@ -58,33 +102,43 @@ function injectLiveChatOverlay() {
       "yt-live-chat-text-message-renderer"
     );
     const fragment = document.createDocumentFragment();
+    let newLastMessageId = lastMessageId;
 
     chatItems.forEach((item) => {
-      const authorName = item.querySelector("#author-name").textContent;
-      const authorPhoto = item.querySelector("#img").src;
-      const badgeElement = item.querySelector(
-        "yt-live-chat-author-badge-renderer #img"
-      );
-      const messageElement = item.querySelector("#message").cloneNode(true);
+      const messageId = item.getAttribute('id');
+      if (messageId && messageId !== lastMessageId) {
+        const authorName = item.querySelector("#author-name")?.textContent || "Unknown";
+        const authorPhoto = item.querySelector("#img")?.src || "";
+        const badgeElement = item.querySelector(
+          "yt-live-chat-author-badge-renderer #img"
+        );
+        const messageElement = item.querySelector("#message")?.cloneNode(true) || document.createTextNode("");
 
-      const authorClass = getChatMessageAuthorClass(item);
+        const authorClass = getChatMessageAuthorClass(item);
 
-      const chatMessageElement = createChatMessageElement(
-        authorName,
-        authorPhoto,
-        badgeElement?.src,
-        messageElement,
-        authorClass
-      );
+        const chatMessageElement = createChatMessageElement(
+          authorName,
+          authorPhoto,
+          badgeElement?.src,
+          messageElement,
+          authorClass
+        );
 
-      fragment.appendChild(chatMessageElement);
+        fragment.appendChild(chatMessageElement);
+        newLastMessageId = messageId; // Update last message ID
+      }
     });
 
-    requestAnimationFrame(() => {
-      chatMessagesContainer.innerHTML = "";
+    if (fragment.children.length > 0) {
       chatMessagesContainer.appendChild(fragment);
       chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-    });
+      lastMessageId = newLastMessageId;
+
+      // Limit the number of messages
+      while (chatMessagesContainer.children.length > MAX_MESSAGES) {
+        chatMessagesContainer.firstElementChild?.remove();
+      }
+    }
   }
 
   // Debounce the updateChatMessages function
@@ -92,41 +146,33 @@ function injectLiveChatOverlay() {
 
   // Function to make the overlay draggable
   function makeDraggable(element) {
-    let pos1 = 0,
-      pos2 = 0,
-      pos3 = 0,
-      pos4 = 0;
     let isDragging = false;
+    let lastX, lastY;
 
-    dragHandle.onmousedown = function (e) {
-      e = e || window.event;
-      e.preventDefault();
+    dragHandle.addEventListener("mousedown", (e) => {
       isDragging = true;
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-      document.onmouseup = closeDragElement;
-      document.onmousemove = dragElement;
-    };
+      lastX = e.clientX;
+      lastY = e.clientY;
+      document.addEventListener("mousemove", onDrag);
+      document.addEventListener("mouseup", stopDrag);
+    });
 
-    function dragElement(e) {
+    function onDrag(e) {
       if (!isDragging) return;
-      e = e || window.event;
-      e.preventDefault();
-      pos1 = pos3 - e.clientX;
-      pos2 = pos4 - e.clientY;
-      pos3 = e.clientX;
-      pos4 = e.clientY;
-
+      const deltaX = e.clientX - lastX;
+      const deltaY = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
       requestAnimationFrame(() => {
-        element.style.top = element.offsetTop - pos2 + "px";
-        element.style.left = element.offsetLeft - pos1 + "px";
+        element.style.top = `${element.offsetTop + deltaY}px`;
+        element.style.left = `${element.offsetLeft + deltaX}px`;
       });
     }
 
-    function closeDragElement() {
-      document.onmouseup = null;
-      document.onmousemove = null;
+    function stopDrag() {
       isDragging = false;
+      document.removeEventListener("mousemove", onDrag);
+      document.removeEventListener("mouseup", stopDrag);
     }
   }
 
@@ -144,50 +190,47 @@ function injectLiveChatOverlay() {
 
   // Function to make the overlay resizable
   function makeResizable(element) {
-    const resizer = document.getElementById("resize-handle");
+    const resizer = overlayChatContainer.querySelector("#resize-handle");
     let isResizing = false;
-    let startX, startY, startWidth, startHeight;
+    let lastX, lastY, startWidth, startHeight;
 
-    function startResize(e) {
+    resizer.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      e.stopPropagation();
       isResizing = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      startWidth = parseInt(
-        document.defaultView.getComputedStyle(element).width,
-        10
-      );
-      startHeight = parseInt(
-        document.defaultView.getComputedStyle(element).height,
-        10
-      );
-      document.addEventListener("mousemove", resize, { passive: false });
-      document.addEventListener("mouseup", stopResize, { passive: true });
-    }
+      lastX = e.clientX;
+      lastY = e.clientY;
+      const style = window.getComputedStyle(element);
+      startWidth = parseInt(style.width, 10);
+      startHeight = parseInt(style.height, 10);
+      document.addEventListener("mousemove", onResize);
+      document.addEventListener("mouseup", stopResize);
+    });
 
-    function resize(e) {
+    function onResize(e) {
       if (!isResizing) return;
-      e.preventDefault();
-      const newWidth = startWidth + e.clientX - startX;
-      const newHeight = startHeight + e.clientY - startY;
-      element.style.width = `${newWidth}px`;
-      element.style.height = `${newHeight}px`;
+      const deltaX = e.clientX - lastX;
+      const deltaY = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      requestAnimationFrame(() => {
+        element.style.width = `${element.offsetWidth + deltaX}px`;
+        element.style.height = `${element.offsetHeight + deltaY}px`;
+      });
     }
 
     function stopResize() {
       isResizing = false;
-      document.removeEventListener("mousemove", resize);
+      document.removeEventListener("mousemove", onResize);
       document.removeEventListener("mouseup", stopResize);
     }
-
-    resizer.addEventListener("mousedown", startResize, { passive: false });
   }
 
   // Function to toggle chat visibility in fullscreen
   function toggleOverlayChat() {
     isOverlayVisible = !isOverlayVisible;
     overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
+    overlayChatContainer.classList.toggle("show", isOverlayVisible);
+    toggleButton.classList.toggle("show", isOverlayVisible);
 
     if (isOverlayVisible) {
       debouncedUpdateChatMessages();
@@ -199,8 +242,6 @@ function injectLiveChatOverlay() {
 
     // Save the current state to local storage
     localStorage.setItem("youtubeOverlayVisible", isOverlayVisible);
-
-    console.log("YouTube Live Chat Overlay: Overlay toggled", isOverlayVisible);
   }
 
   // Listen for fullscreen changes
@@ -209,32 +250,30 @@ function injectLiveChatOverlay() {
     () => {
       if (document.fullscreenElement) {
         toggleButton.style.display = "block";
-        // Restore the last known state when entering fullscreen
+        toggleButton.classList.add("show");
+
         const savedState = localStorage.getItem("youtubeOverlayVisible");
-        if (savedState !== null) {
-          isOverlayVisible = savedState === "true";
-          overlayChatContainer.style.display = isOverlayVisible
-            ? "block"
-            : "none";
-          if (isOverlayVisible) {
-            debouncedUpdateChatMessages();
-            clearInterval(updateInterval);
-            updateInterval = setInterval(debouncedUpdateChatMessages, 800);
-          }
+        if (savedState === "true") {
+          isOverlayVisible = true;
+          overlayChatContainer.style.display = "block";
+          overlayChatContainer.classList.add("show");
+          debouncedUpdateChatMessages();
+          clearInterval(updateInterval);
+          updateInterval = setInterval(debouncedUpdateChatMessages, 800);
         }
-        console.log("YouTube Live Chat Overlay: Entered fullscreen");
       } else {
         toggleButton.style.display = "none";
+        toggleButton.classList.remove("show");
         overlayChatContainer.style.display = "none";
+        overlayChatContainer.classList.remove("show");
         clearInterval(updateInterval);
-        console.log("YouTube Live Chat Overlay: Exited fullscreen");
       }
     },
     { passive: true }
   );
 
   // Add click event to toggle button
-  toggleButton.addEventListener("click", toggleOverlayChat);
+  toggleButton.addEventListener("click", toggleOverlayChat, { passive: true });
 
   // Make the overlay draggable and resizable
   makeDraggable(overlayChatContainer);
@@ -242,21 +281,22 @@ function injectLiveChatOverlay() {
 
   // Initialize overlay state
   initializeOverlayState();
-
-  console.log("YouTube Live Chat Overlay: Injection complete");
 }
 
 function initializeOverlayState() {
   const savedState = localStorage.getItem("youtubeOverlayVisible");
-  if (savedState !== null) {
-    isOverlayVisible = savedState === "true";
-    overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
-    if (isOverlayVisible && document.fullscreenElement) {
-      debouncedUpdateChatMessages();
-      clearInterval(updateInterval);
-      updateInterval = setInterval(debouncedUpdateChatMessages, 800);
-    }
+  if (savedState === "true" && document.fullscreenElement) {
+    isOverlayVisible = true;
+    overlayChatContainer.style.display = "block";
+    overlayChatContainer.classList.add("show");
+    debouncedUpdateChatMessages();
+    clearInterval(updateInterval);
+    updateInterval = setInterval(debouncedUpdateChatMessages, 800);
   }
+
+  const savedOpacity = localStorage.getItem("chatOverlayOpacity") || 50;
+  overlayChatContainer.style.backgroundColor = `rgba(0, 0, 0, ${savedOpacity / 100})`;
+  lastMessageId = null; // Initialize lastMessageId
 }
 
 function cleanupOverlay() {
@@ -280,17 +320,18 @@ if (document.readyState === "complete") {
 
 // Listen for YouTube spa navigation
 let lastUrl = location.href;
-new MutationObserver(() => {
+const urlObserver = new MutationObserver(() => {
   const url = location.href;
   if (url !== lastUrl) {
     lastUrl = url;
     cleanupOverlay();
     injectLiveChatOverlay();
   }
-}).observe(document, { subtree: true, childList: true });
+});
+urlObserver.observe(document, { subtree: true, childList: true });
 
 // Additional check for dynamic content loading
-const observer = new MutationObserver((mutations) => {
+const dynamicObserver = new MutationObserver((mutations) => {
   if (
     document.querySelector(".html5-video-player") &&
     (document.querySelector("#chat-frame") ||
@@ -298,11 +339,10 @@ const observer = new MutationObserver((mutations) => {
   ) {
     cleanupOverlay();
     injectLiveChatOverlay();
-    observer.disconnect();
+    dynamicObserver.disconnect();
   }
 });
-
-observer.observe(document.body, { childList: true, subtree: true });
+dynamicObserver.observe(document.body, { childList: true, subtree: true });
 
 function createChatMessageElement(
   authorName,
@@ -353,4 +393,11 @@ function getChatMessageAuthorClass(item) {
     return "author-moderator";
   }
   return "";
+}
+
+// Event handler for opacity change
+function handleOpacityChange(e) {
+  const opacity = e.target.value / 100;
+  overlayChatContainer.style.backgroundColor = `rgba(0, 0, 0, ${opacity})`;
+  localStorage.setItem("chatOverlayOpacity", e.target.value);
 }

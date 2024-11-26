@@ -11,6 +11,14 @@
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(2px);
+  transition: opacity 0.1s ease, visibility 0.3s ease; /* Reduced opacity transition time */
+  opacity: 0;
+  visibility: hidden;
+}
+
+#overlay-chat-container.show {
+  opacity: 1;
+  visibility: visible;
 }
 
 #drag-handle {
@@ -42,6 +50,14 @@
   border-radius: 5px;
   cursor: pointer;
   display: none;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  opacity: 0;
+  visibility: hidden;
+}
+
+#toggle-chat-overlay.show {
+  opacity: 1;
+  visibility: visible;
 }
 
 .chat-message {
@@ -129,4 +145,47 @@
 #chat-messages-container {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.1);
+}
+
+#settings-icon {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+  color: white;
+  z-index: 2147483649;
+}
+
+#drag-handle:hover #settings-icon {
+  opacity: 1;
+}
+
+#settings-panel {
+  position: absolute;
+  top: 25px;
+  right: 5px;
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 10px;
+  border-radius: 4px;
+  display: none;
+  z-index: 2147483649;
+}
+
+#settings-panel.show {
+  display: block;
+}
+
+.opacity-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+
+.opacity-control input {
+  width: 100px;
 }
