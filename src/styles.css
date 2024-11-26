@@ -11,14 +11,29 @@
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(2px);
-  transition: opacity 0.1s ease, visibility 0.3s ease; /* Reduced opacity transition time */
-  opacity: 0;
-  visibility: hidden;
+  animation: fadeOut 0.2s ease forwards;
 }
 
 #overlay-chat-container.show {
-  opacity: 1;
-  visibility: visible;
+  animation: fadeIn 0.2s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 #drag-handle {
@@ -81,6 +96,24 @@
   margin-bottom: 8px;
   padding: 3px;
   color: white;
+  animation: messageFade 0.2s ease forwards;
+  opacity: 0;
+  transform: none;
+}
+
+@keyframes messageFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.chat-message-profile {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
 }
 
 .chat-message-profile {
