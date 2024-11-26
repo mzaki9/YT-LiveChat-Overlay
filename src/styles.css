@@ -43,21 +43,32 @@
   top: 10px;
   right: 10px;
   z-index: 2147483648;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(33, 33, 33, 0.8);
   color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 12px;
+  border-radius: 4px;
   cursor: pointer;
   display: none;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
+  transition: all 0.2s ease;
   opacity: 0;
   visibility: hidden;
+  font-size: 13px;
+  font-family: "YouTube Noto", Roboto, Arial, sans-serif;
+}
+
+#toggle-chat-overlay:hover {
+  background-color: rgba(33, 33, 33, 0.95);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 #toggle-chat-overlay.show {
-  opacity: 1;
+  opacity: 0.8;
   visibility: visible;
+}
+
+#toggle-chat-overlay.show:hover {
+  opacity: 1;
 }
 
 .chat-message {

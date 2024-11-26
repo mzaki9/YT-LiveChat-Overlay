@@ -87,8 +87,16 @@ function injectLiveChatOverlay() {
   // Create toggle button
   const toggleButton = document.createElement("button");
   toggleButton.id = "toggle-chat-overlay";
-  toggleButton.textContent = "Toggle Chat Overlay";
+  toggleButton.textContent = "Chat Overlay";
+  toggleButton.title = "Toggle Live Chat Overlay (Alt+C)"; // Add tooltip
   videoPlayer.appendChild(toggleButton);
+  
+  // Add keyboard shortcut
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key.toLowerCase() === 'c' && document.fullscreenElement) {
+      toggleOverlayChat();
+    }
+  });
 
   // Function to extract and display chat messages
   let lastMessageId = null; // Track the last processed message
@@ -230,7 +238,7 @@ function injectLiveChatOverlay() {
     isOverlayVisible = !isOverlayVisible;
     overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
     overlayChatContainer.classList.toggle("show", isOverlayVisible);
-    toggleButton.classList.toggle("show", isOverlayVisible);
+    toggleButton.textContent = isOverlayVisible ? "Hide Chat" : "Show Chat";
 
     if (isOverlayVisible) {
       debouncedUpdateChatMessages();
