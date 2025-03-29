@@ -86,7 +86,7 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
   if (!chatDocument) return;
 
   const chatItems = chatDocument.querySelectorAll(
-    "yt-live-chat-text-message-renderer"
+    "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer"
   );
   
   // Process new messages only

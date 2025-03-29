@@ -5,16 +5,54 @@
 // Main variables
 let videoPlayer, liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton;
 
+function log(message) {
+  console.log(`[YT Chat Overlay] ${message}`);
+}
+
+// Handle fullscreen changes
+function handleFullscreenChange() {
+  if (!videoPlayer || !overlayChatContainer || !toggleButton) {
+    log("Elements not ready during fullscreen change");
+    return;
+  }
+
+  if (document.fullscreenElement) {
+    toggleButton.style.display = "block";
+    toggleButton.classList.add("show");
+
+    const savedState = localStorage.getItem("youtubeOverlayVisible");
+    if (savedState === "true") {
+      isOverlayVisible = true;
+      overlayChatContainer.style.display = "block";
+      overlayChatContainer.classList.add("show");
+      
+      // Update immediately and set interval
+      updateChatMessages(liveChatFrame, chatMessagesContainer);
+      clearInterval(updateInterval);
+      updateInterval = setInterval(() => {
+        updateChatMessages(liveChatFrame, chatMessagesContainer);
+      }, 800);
+    }
+  } else {
+    toggleButton.style.display = "none";
+    toggleButton.classList.remove("show");
+    overlayChatContainer.style.display = "none";
+    overlayChatContainer.classList.remove("show");
+    clearInterval(updateInterval);
+  }
+}
+
 // Main function to initialize the extension
 function injectLiveChatOverlay() {
   // Find required elements
   videoPlayer = document.querySelector(".html5-video-player");
-  liveChatFrame =
-    document.querySelector("#chat-frame") ||
-    document.querySelector("iframe#chatframe");
+  
+  // Use the findChatFrame utility function
+  liveChatFrame = findChatFrame();
 
   if (!videoPlayer || !liveChatFrame) {
-    return;
+    log("Required elements not found, will retry later");
+    return false; // Return false to indicate the injection failed
   }
 
   // Clean up existing overlay
@@ -42,66 +80,78 @@ function injectLiveChatOverlay() {
 
   // Initialize overlay state
   initializeOverlayState(overlayChatContainer, liveChatFrame, chatMessagesContainer);
-}
-
-// Handle fullscreen changes
-function handleFullscreenChange() {
-  if (document.fullscreenElement) {
-    toggleButton.style.display = "block";
-    toggleButton.classList.add("show");
-
-    const savedState = localStorage.getItem("youtubeOverlayVisible");
-    if (savedState === "true") {
-      isOverlayVisible = true;
-      overlayChatContainer.style.display = "block";
-      overlayChatContainer.classList.add("show");
-      
-      // Create a debounced update function
-      const debouncedUpdate = debounce(() => {
-        updateChatMessages(liveChatFrame, chatMessagesContainer);
-      }, 500);
-      
-      // Update immediately and set interval
-      debouncedUpdate();
-      clearInterval(updateInterval);
-      updateInterval = setInterval(debouncedUpdate, 800);
-    }
-  } else {
-    toggleButton.style.display = "none";
-    toggleButton.classList.remove("show");
-    overlayChatContainer.style.display = "none";
-    overlayChatContainer.classList.remove("show");
-    clearInterval(updateInterval);
-  }
+  
+  return true; // Return true to indicate success
 }
 
 // Run the injection function when the page is loaded
 if (document.readyState === "complete") {
-  injectLiveChatOverlay();
+  const success = injectLiveChatOverlay();
+  if (!success) {
+    // Set up a retry mechanism
+    const injectionInterval = setInterval(() => {
+      liveChatFrame = findChatFrame();
+      if (liveChatFrame) {
+        const success = injectLiveChatOverlay();
+        if (success) {
+          clearInterval(injectionInterval);
+          log("Successfully injected after retry");
+        }
+      }
+    }, 2000); // Check every 2 seconds
+  }
 } else {
-  window.addEventListener("load", injectLiveChatOverlay);
+  window.addEventListener("load", () => {
+    const success = injectLiveChatOverlay();
+    if (!success) {
+      // Retry after load
+      const injectionInterval = setInterval(() => {
+        liveChatFrame = findChatFrame();
+        if (liveChatFrame) {
+          const success = injectLiveChatOverlay();
+          if (success) {
+            clearInterval(injectionInterval);
+            log("Successfully injected after load and retry");
+          }
+        }
+      }, 2000);
+    }
+  });
 }
 
-// Listen for YouTube SPA navigation
-let lastUrl = location.href;
-const urlObserver = new MutationObserver(() => {
-  const url = location.href;
-  if (url !== lastUrl) {
-    lastUrl = url;
-    injectLiveChatOverlay();
+// More reliable chat iframe detection for SPAs
+const urlObserver = new MutationObserver((mutations) => {
+  // Check if URL has changed (for YouTube SPA navigation)
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
+    log("URL changed, looking for chat frame");
+    // Allow some time for YouTube to load the new page
+    setTimeout(() => {
+      liveChatFrame = findChatFrame();
+      if (liveChatFrame) {
+        injectLiveChatOverlay();
+      }
+    }, 1500);
+  }
+  
+  // Also look for chat frames that might have been dynamically added
+  for (const mutation of mutations) {
+    if (mutation.type === 'childList' && mutation.addedNodes.length) {
+      // Check if any of the added nodes or their children could be a chat frame
+      const chatFrame = findChatFrame();
+      if (chatFrame && chatFrame !== liveChatFrame) {
+        log("Chat frame dynamically added");
+        liveChatFrame = chatFrame;
+        injectLiveChatOverlay();
+        break;
+      }
+    }
   }
 });
-urlObserver.observe(document, { subtree: true, childList: true });
 
-// Additional check for dynamic content loading
-const dynamicObserver = new MutationObserver((mutations) => {
-  if (
-    document.querySelector(".html5-video-player") &&
-    (document.querySelector("#chat-frame") ||
-      document.querySelector("iframe#chatframe"))
-  ) {
-    injectLiveChatOverlay();
-    dynamicObserver.disconnect();
-  }
+// Start observing with necessary parameters
+let lastUrl = location.href;
+urlObserver.observe(document.body, { 
+  childList: true, 
+  subtree: true 
 });
-dynamicObserver.observe(document.body, { childList: true, subtree: true });
