@@ -1,3 +1,7 @@
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
 #overlay-chat-container {
     display: none;
     position: absolute;
@@ -177,16 +181,30 @@
     color: #5e84f1;
   }
   
-  .resize-handle {
+  #resize-handle {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.3);
-    transition: background-color 0.3s ease;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    background-color: rgba(255, 255, 255, 0.5);
+    cursor: nwse-resize;
+    border-radius: 0 0 12px 0; /* Match container corner radius */
     z-index: 100;
+    transition: background-color 0.2s ease;
+  }
+  #overlay-chat-container.resizing {
+    user-select: none;
+    transition: none !important;
+    /* Add a subtle highlight during resize */
+    box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.5);
   }
   
-  .resize-handle:hover,
-  .resizing .resize-handle {
-    background-color: rgba(255, 255, 255, 0.7);
+  #resize-handle:hover,
+  #overlay-chat-container.resizing #resize-handle {
+    background-color: rgba(255, 255, 255, 0.8);
+    width: 18px;
+    height: 18px;
   }
   
   .resize-handle.horizontal {

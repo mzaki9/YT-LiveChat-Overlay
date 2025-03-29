@@ -5,6 +5,49 @@
 // Variables for tracking the overlay state
 let updateInterval;
 let isOverlayVisible = false;
+// Add this function to your overlay.js file
+
+// Create a toggle button for the chat overlay
+function createToggleButton(videoPlayer, toggleCallback) {
+  const toggleButton = document.createElement("button");
+  toggleButton.id = "toggle-chat-overlay";
+  toggleButton.textContent = isOverlayVisible ? "Hide Chat" : "Show Chat";
+  toggleButton.addEventListener("click", toggleCallback);
+  
+  videoPlayer.appendChild(toggleButton);
+  
+  return toggleButton;
+}
+// Setup settings panel interactions
+function setupSettingsPanel(settingsIcon, settingsPanel, container) {
+  // Toggle settings panel visibility
+  settingsIcon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    settingsPanel.classList.toggle("show");
+  });
+
+  // Close settings panel when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!settingsPanel.contains(e.target) && e.target !== settingsIcon) {
+      settingsPanel.classList.remove("show");
+    }
+  });
+
+  // Initialize opacity slider
+  const opacitySlider = settingsPanel.querySelector("#opacity-slider");
+  const savedOpacity = localStorage.getItem("chatOverlayOpacity") || 50;
+  
+  // Set initial value
+  opacitySlider.value = savedOpacity;
+  container.style.backgroundColor = `rgba(0, 0, 0, ${savedOpacity / 100})`;
+  
+  // Handle opacity changes
+  opacitySlider.addEventListener("input", (e) => {
+    const value = e.target.value;
+    container.style.backgroundColor = `rgba(0, 0, 0, ${value / 100})`;
+    localStorage.setItem("chatOverlayOpacity", value);
+  });
+}
 
 // Create the chat overlay and return elements
 function createChatOverlay(videoPlayer) {
@@ -52,6 +95,37 @@ function createChatOverlay(videoPlayer) {
   // Initialize settings panel
   setupSettingsPanel(settingsIcon, settingsPanel, overlayChatContainer);
 
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Get saved positions (as percentages)
+  const savedLeft = localStorage.getItem("chatOverlayLeft");
+  const savedTop = localStorage.getItem("chatOverlayTop");
+  const savedWidth = localStorage.getItem("chatOverlayWidth");
+  const savedHeight = localStorage.getItem("chatOverlayHeight");
+  
+  // Apply saved position or use defaults
+  if (savedLeft && savedTop && savedWidth && savedHeight) {
+    // Convert percentages to pixels
+    const left = (parseFloat(savedLeft) / 100) * viewportWidth;
+    const top = (parseFloat(savedTop) / 100) * viewportHeight;
+    const width = (parseFloat(savedWidth) / 100) * viewportWidth;
+    const height = (parseFloat(savedHeight) / 100) * viewportHeight;
+    
+    // Ensure the values are within reasonable bounds
+    overlayChatContainer.style.left = `${Math.max(0, Math.min(left, viewportWidth - 200))}px`;
+    overlayChatContainer.style.top = `${Math.max(0, Math.min(top, viewportHeight - 150))}px`;
+    overlayChatContainer.style.width = `${Math.max(200, Math.min(width, viewportWidth * 0.9))}px`;
+    overlayChatContainer.style.height = `${Math.max(150, Math.min(height, viewportHeight * 0.9))}px`;
+  } else {
+    // Default position (right side of screen)
+    overlayChatContainer.style.right = "5%";
+    overlayChatContainer.style.top = "10%";
+    overlayChatContainer.style.width = "25%";
+    overlayChatContainer.style.height = "80%";
+  }
+  
   // Make overlay draggable and resizable
   makeDraggable(overlayChatContainer, dragHandle);
   makeResizable(overlayChatContainer, resizeHandle);
