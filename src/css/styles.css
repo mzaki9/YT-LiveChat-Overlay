@@ -1,0 +1,304 @@
+#overlay-chat-container {
+    display: none;
+    position: absolute;
+    top: 10%;
+    right: 5%;
+    width: 25%;
+    height: 80%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2147483647;
+    overflow: hidden;
+    border-radius: 12px; /* Increased radius for more modern look */
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); /* Enhanced shadow */
+    backdrop-filter: blur(3px); /* Increased blur for better readability */
+    animation: fadeOut 0.2s ease forwards;
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+  }
+  
+  #overlay-chat-container.show {
+    animation: fadeIn 0.2s ease forwards;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  
+  #drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 24px; /* Slightly taller for better usability */
+    background-color: rgba(33, 33, 33, 0.7); /* More distinct header */
+    cursor: move;
+    border-radius: 12px 12px 0 0; /* Match top corners */
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 10px;
+  }
+  
+  /* Messages container with improved spacing */
+  #chat-messages-container {
+    height: calc(100% - 24px); /* Adjust for taller header */
+    overflow-y: auto;
+    margin-top: 24px;
+    padding: 10px 12px;
+  }
+  
+  
+  #toggle-chat-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2147483648;
+    background-color: rgba(33, 33, 33, 0.8);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: none;
+    transition: all 0.2s ease;
+    opacity: 0;
+    visibility: hidden;
+    font-size: 13px;
+    font-family: "YouTube Noto", Roboto, Arial, sans-serif;
+  }
+  
+  #toggle-chat-overlay:hover {
+    background-color: rgba(33, 33, 33, 0.95);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  
+  #toggle-chat-overlay.show {
+    opacity: 0.8;
+    visibility: visible;
+  }
+  
+  #toggle-chat-overlay.show:hover {
+    opacity: 1;
+  }
+  
+  .chat-message {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    background-color: rgba(40, 40, 40, 0.3);
+    box-sizing: border-box;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    color: white;
+    transform: none;
+    transition: background-color 0.2s ease;
+    /* Replace the old animation with a simpler one */
+    animation: messageFadeSimple 0.2s ease forwards;
+    opacity: 0;
+  }
+  
+  /* New more subtle animation for messages */
+  @keyframes messageFadeSimple {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  
+  .chat-message-profile {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    margin-right: 10px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Add subtle border */
+  }
+  
+  .chat-message-content {
+    display: flex;
+    flex-direction: column; /* Stack author and message vertically */
+    align-items: flex-start;
+    flex-grow: 1;
+  }
+  
+  .chat-message-author {
+    font-weight: bold;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+  }
+  
+  .chat-message-text {
+    word-break: break-word;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  .chat-message-timestamp {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    margin-right: 6px;
+    font-weight: normal;
+  }
+  
+  .chat-badge {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  
+  .author-member {
+    color: #2ba640;
+  }
+  
+  .author-moderator {
+    color: #5e84f1;
+  }
+  
+  .resize-handle {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.3);
+    transition: background-color 0.3s ease;
+    z-index: 100;
+  }
+  
+  .resize-handle:hover,
+  .resizing .resize-handle {
+    background-color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .resize-handle.horizontal {
+    cursor: ew-resize;
+    width: 8px;
+    height: calc(100% - 16px);
+    right: 0;
+    top: 8px;
+    border-radius: 0 4px 4px 0;
+  }
+  
+  .resize-handle.vertical {
+    cursor: ns-resize;
+    height: 8px;
+    width: calc(100% - 16px);
+    bottom: 0;
+    left: 8px;
+    border-radius: 0 0 4px 4px;
+  }
+  
+  .resize-handle.corner {
+    cursor: nwse-resize;
+    width: 16px;
+    height: 16px;
+    right: 0;
+    bottom: 0;
+    border-radius: 0 0 4px 0;
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .chat-container.resizing {
+    user-select: none;
+    transition: none;
+  }
+  
+  /* Styling the scrollbar for webkit browsers */
+  #chat-messages-container::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  #chat-messages-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  
+  #chat-messages-container::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+  }
+  
+  /* For Firefox */
+  #chat-messages-container {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.1);
+  }
+  
+  #settings-icon {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    width: 16px;
+    height: 16px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+    color: white;
+    z-index: 2147483649;
+  }
+  
+  #drag-handle:hover #settings-icon {
+    opacity: 1;
+  }
+  
+  #settings-panel {
+    position: absolute;
+    top: 25px;
+    right: 5px;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-radius: 4px;
+    display: none;
+    z-index: 2147483649;
+  }
+  
+  #settings-panel.show {
+    display: block;
+  }
+  
+  .opacity-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+  }
+  
+  .opacity-control input {
+    width: 100px;
+  }
+
+
+  /* Add these CSS rules to match our resize-handle ID */
+#resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    background-color: rgba(255, 255, 255, 0.5);
+    cursor: nwse-resize;
+    border-radius: 0 0 4px 0;
+    z-index: 100;
+  }
+  
+  #resize-handle:hover {
+    background-color: rgba(255, 255, 255, 0.7);
+  }
