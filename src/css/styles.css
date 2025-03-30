@@ -102,16 +102,16 @@ html, body {
     display: flex;
     align-items: flex-start;
     width: 100%;
-    background-color: rgba(40, 40, 40, 0.3);
+    /* background-color: rgba(40, 40, 40, 0.3); */
     box-sizing: border-box;
     border-radius: 8px;
-    margin-bottom: 10px;
-    padding: 8px 10px;
+    margin-bottom: 3px;
+    padding: 4px 5px;
     color: white;
     transform: none;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.1s ease;
     /* Replace the old animation with a simpler one */
-    animation: messageFadeSimple 0.2s ease forwards;
+    animation: messageFadeSimple 0.1s ease forwards;
     opacity: 0;
   }
   
@@ -139,14 +139,15 @@ html, body {
   
   .chat-message-content {
     display: flex;
-    flex-direction: column; /* Stack author and message vertically */
-    align-items: flex-start;
+    flex-direction: row; /* Change from column to row */
+    align-items: baseline; /* Align text baseline */
+    flex-wrap: wrap; /* Allow wrapping for longer messages */
     flex-grow: 1;
   }
-  
   .chat-message-author {
     font-weight: bold;
-    margin-bottom: 4px;
+    margin-right: 6px; /* Add spacing between author and message */
+    margin-bottom: 0; /* Remove bottom margin previously used for vertical stacking */
     white-space: nowrap;
     display: flex;
     align-items: center;
@@ -157,6 +158,8 @@ html, body {
     word-break: break-word;
     font-size: 14px;
     line-height: 1.4;
+    flex: 1 1 auto; /* Allow text to grow and fill available space */
+    min-width: 0; /* Allow text container to shrink below content size */
   }
   
   .chat-message-timestamp {
@@ -320,3 +323,61 @@ html, body {
   #resize-handle:hover {
     background-color: rgba(255, 255, 255, 0.7);
   }
+
+  /* Add these styles for the toggle switch */
+
+.toggle-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
+  margin-top: 10px;
+}
+
+#timestamp-toggle {
+  position: relative;
+  width: 32px;
+  height: 16px;
+  appearance: none;
+  background-color: #555;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  outline: none;
+}
+
+#timestamp-toggle:checked {
+  background-color: #2196F3;
+}
+
+#timestamp-toggle:before {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  background-color: white;
+  transition: all 0.3s;
+}
+
+#timestamp-toggle:checked:before {
+  left: 18px;
+}
+
+/* Define how timestamps behave when disabled using the HTML attribute */
+html[data-timestamps-enabled="false"] .chat-message-timestamp {
+  display: none !important;
+}
+
+
+@media (max-width: 400px) {
+  .chat-message-content {
+    flex-direction: column; /* Fall back to column on very small screens */
+  }
+  
+  .chat-message-author {
+    margin-bottom: 4px; /* Restore bottom margin for very small screens */
+  }
+}

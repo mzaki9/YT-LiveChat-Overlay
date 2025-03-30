@@ -38,6 +38,12 @@ function createChatMessageElement(
   const now = new Date();
   timeStamp.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   
+  // Check if timestamps are enabled
+  const timestampsEnabled = localStorage.getItem("chatTimestampsEnabled") !== "false";
+  if (!timestampsEnabled) {
+    timeStamp.style.display = "none";
+  }
+  
   // Profile image with fallback
   const profileImg = document.createElement("img");
   profileImg.className = "chat-message-profile";

@@ -18,7 +18,8 @@ function createToggleButton(videoPlayer, toggleCallback) {
   
   return toggleButton;
 }
-// Setup settings panel interactions
+// Update the setupSettingsPanel function
+
 function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   // Toggle settings panel visibility
   settingsIcon.addEventListener("click", (e) => {
@@ -46,6 +47,27 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
     const value = e.target.value;
     container.style.backgroundColor = `rgba(0, 0, 0, ${value / 100})`;
     localStorage.setItem("chatOverlayOpacity", value);
+  });
+  
+  // Initialize timestamp toggle
+  const timestampToggle = settingsPanel.querySelector("#timestamp-toggle");
+  const timestampsEnabled = localStorage.getItem("chatTimestampsEnabled") !== "false"; // Default to true
+  
+  // Set initial state
+  timestampToggle.checked = timestampsEnabled;
+  document.documentElement.setAttribute("data-timestamps-enabled", timestampsEnabled);
+  
+  // Handle toggle changes
+  timestampToggle.addEventListener("change", (e) => {
+    const enabled = e.target.checked;
+    localStorage.setItem("chatTimestampsEnabled", enabled);
+    document.documentElement.setAttribute("data-timestamps-enabled", enabled);
+    
+    // Update existing timestamps in the DOM
+    const timestamps = document.querySelectorAll(".chat-message-timestamp");
+    timestamps.forEach(timestamp => {
+      timestamp.style.display = enabled ? "inline" : "none";
+    });
   });
 }
 
@@ -75,6 +97,10 @@ function createChatOverlay(videoPlayer) {
     <div class="opacity-control">
       <label>Opacity:</label>
       <input type="range" min="10" max="100" value="50" id="opacity-slider">
+    </div>
+    <div class="toggle-control">
+      <label for="timestamp-toggle">Show timestamps:</label>
+      <input type="checkbox" id="timestamp-toggle" checked>
     </div>
   `;
   overlayChatContainer.appendChild(settingsPanel);
