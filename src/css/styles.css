@@ -2,12 +2,11 @@
 :root {
   --chat-font-size: 14px;
 }
-
-html,
-body {
-  overflow: hidden;
-  height: 100%;
+.ytp-fullscreen html,
+.ytp-fullscreen body {
+  overflow: auto !important;
 }
+
 #overlay-chat-container {
   display: none;
   position: absolute;
@@ -21,7 +20,7 @@ body {
   border-radius: 12px; /* Increased radius for more modern look */
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); /* Enhanced shadow */
   backdrop-filter: blur(3px); /* Increased blur for better readability */
-  animation: fadeOut 0.2s ease forwards;
+  animation: fadeOut 0.1s ease forwards;
   border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
 }
 
@@ -52,19 +51,19 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 24px; /* Slightly taller for better usability */
-  background-color: rgba(33, 33, 33, 0.7); /* More distinct header */
+  height: 24px; 
+  background-color: rgba(33, 33, 33, 0.7); 
   cursor: move;
-  border-radius: 12px 12px 0 0; /* Match top corners */
+  border-radius: 12px 12px 0 0; 
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding: 0 10px;
 }
 
-/* Messages container with improved spacing */
+
 #chat-messages-container {
-  height: calc(100% - 24px); /* Adjust for taller header */
+  height: calc(100% - 24px); 
   overflow-y: auto;
   margin-top: 24px;
   padding: 10px 12px;
@@ -79,7 +78,7 @@ body {
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 6px;
-  border-radius: 50%; /* Make it circular */
+  border-radius: 50%; 
   cursor: pointer;
   display: none;
   transition: all 0.2s ease;
@@ -106,7 +105,7 @@ body {
   opacity: 1;
 }
 
-/* Make SVG inside the button white */
+
 #toggle-chat-overlay svg {
   fill: white;
   stroke: white;
@@ -129,7 +128,6 @@ body {
   opacity: 0;
 }
 
-/* New more subtle animation for messages */
 @keyframes messageFadeSimple {
   from {
     opacity: 0;

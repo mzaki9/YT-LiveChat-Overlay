@@ -30,7 +30,7 @@ function createChatMessageElement(
   chatMessageElement.className = "chat-message";
   
   // Simplified animation - just a gentle slide-in
-  chatMessageElement.style.animation = "messageFadeSimple 0.2s ease forwards";
+  chatMessageElement.style.animation = "messageFadeSimple 0.1s ease forwards";
 
   // Create time stamp element
   const timeStamp = document.createElement("span");
