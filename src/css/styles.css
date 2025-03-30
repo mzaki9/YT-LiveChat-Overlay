@@ -1,3 +1,8 @@
+
+:root {
+  --chat-font-size: 14px;
+}
+
 html,
 body {
   overflow: hidden;
@@ -159,12 +164,12 @@ body {
   white-space: nowrap;
   display: flex;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--chat-font-size);
 }
 
 .chat-message-text {
   word-break: break-word;
-  font-size: 14px;
+  font-size: var(--chat-font-size);
   line-height: 1.4;
   flex: 1 1 auto; /* Allow text to grow and fill available space */
   min-width: 0; /* Allow text container to shrink below content size */
@@ -172,7 +177,7 @@ body {
 
 .chat-message-timestamp {
   color: rgba(255, 255, 255, 0.7);
-  font-size: 11px;
+  font-size: var(--chat-font-size - 2px);
   margin-right: 6px;
   font-weight: normal;
 }
@@ -182,6 +187,18 @@ body {
   height: 16px;
   margin-right: 4px;
   vertical-align: middle;
+}
+
+.font-size-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  margin-top: 10px;
+}
+
+.font-size-control input {
+  width: 100px;
 }
 
 .author-member {
@@ -297,6 +314,7 @@ body {
   border-radius: 4px;
   display: none;
   z-index: 2147483649;
+  pointer-events: auto; /* Ensure it captures its own events */
 }
 
 #settings-panel.show {
@@ -386,4 +404,69 @@ html[data-timestamps-enabled="false"] .chat-message-timestamp {
   .chat-message-author {
     margin-bottom: 4px; /* Restore bottom margin for very small screens */
   }
+}
+
+/* Styling for the font size input */
+.font-size-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  margin-top: 10px;
+}
+
+/* Styling for the font size input */
+.font-size-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  margin-top: 10px;
+}
+
+.font-size-input {
+  width: 50px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  color: white;
+  padding: 5px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.font-size-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Custom spinner buttons styling */
+.font-size-input::-webkit-inner-spin-button,
+.font-size-input::-webkit-outer-spin-button {
+  opacity: 1;
+  height: 24px;
+}
+
+.font-size-unit {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.font-size-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Custom spinner buttons styling */
+.font-size-input::-webkit-inner-spin-button,
+.font-size-input::-webkit-outer-spin-button {
+  opacity: 1;
+  height: 24px;
+}
+
+.font-size-unit {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
 }

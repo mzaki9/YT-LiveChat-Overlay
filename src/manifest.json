@@ -6,6 +6,11 @@
   "icons": {
     "48": "icon.png"
   },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "youtube-livechat-overlay@example.com"
+    }
+  },
   "permissions": [  
     "activeTab",
     "https://www.youtube.com/*"

@@ -5,14 +5,11 @@
 // Main variables
 let videoPlayer, liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton;
 
-function log(message) {
-  console.log(`[YT Chat Overlay] ${message}`);
-}
 
 // Handle fullscreen changes
 function handleFullscreenChange() {
   if (!videoPlayer || !overlayChatContainer || !toggleButton) {
-    log("Elements not ready during fullscreen change");
+    // log("Elements not ready during fullscreen change");
     return;
   }
 
@@ -51,7 +48,7 @@ function injectLiveChatOverlay() {
   liveChatFrame = findChatFrame();
 
   if (!videoPlayer || !liveChatFrame) {
-    log("Required elements not found, will retry later");
+    // log("Required elements not found, will retry later");
     return false; // Return false to indicate the injection failed
   }
 
@@ -95,7 +92,7 @@ if (document.readyState === "complete") {
         const success = injectLiveChatOverlay();
         if (success) {
           clearInterval(injectionInterval);
-          log("Successfully injected after retry");
+          // log("Successfully injected after retry");
         }
       }
     }, 2000); // Check every 2 seconds
@@ -111,7 +108,7 @@ if (document.readyState === "complete") {
           const success = injectLiveChatOverlay();
           if (success) {
             clearInterval(injectionInterval);
-            log("Successfully injected after load and retry");
+            // log("Successfully injected after load and retry");
           }
         }
       }, 2000);
@@ -124,7 +121,7 @@ const urlObserver = new MutationObserver((mutations) => {
   // Check if URL has changed (for YouTube SPA navigation)
   if (location.href !== lastUrl) {
     lastUrl = location.href;
-    log("URL changed, looking for chat frame");
+    // log("URL changed, looking for chat frame");
     // Allow some time for YouTube to load the new page
     setTimeout(() => {
       liveChatFrame = findChatFrame();
@@ -140,7 +137,7 @@ const urlObserver = new MutationObserver((mutations) => {
       // Check if any of the added nodes or their children could be a chat frame
       const chatFrame = findChatFrame();
       if (chatFrame && chatFrame !== liveChatFrame) {
-        log("Chat frame dynamically added");
+        // log("Chat frame dynamically added");
         liveChatFrame = chatFrame;
         injectLiveChatOverlay();
         break;

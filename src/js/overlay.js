@@ -10,19 +10,19 @@ let isOverlayVisible = false;
 function createToggleButton(videoPlayer, toggleCallback) {
   const toggleButton = document.createElement("button");
   toggleButton.id = "toggle-chat-overlay";
-  
+
   // Use an SVG icon instead of text
   toggleButton.innerHTML = `
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
     </svg>
   `;
-  
+
   toggleButton.title = isOverlayVisible ? "Hide Chat" : "Show Chat"; // Add tooltip
   toggleButton.addEventListener("click", toggleCallback);
-  
+
   videoPlayer.appendChild(toggleButton);
-  
+
   return toggleButton;
 }
 
@@ -43,37 +43,107 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   // Initialize opacity slider
   const opacitySlider = settingsPanel.querySelector("#opacity-slider");
   const savedOpacity = localStorage.getItem("chatOverlayOpacity") || 50;
-  
+
   // Set initial value
   opacitySlider.value = savedOpacity;
   container.style.backgroundColor = `rgba(0, 0, 0, ${savedOpacity / 100})`;
-  
+
   // Handle opacity changes
   opacitySlider.addEventListener("input", (e) => {
+    e.stopPropagation();
     const value = e.target.value;
     container.style.backgroundColor = `rgba(0, 0, 0, ${value / 100})`;
     localStorage.setItem("chatOverlayOpacity", value);
   });
+
+  // Initialize font size input
+  const fontSizeInput = settingsPanel.querySelector("#font-size-input");
+  const savedFontSize = localStorage.getItem("chatFontSize") || 14;
+
+  // Set initial value
+  fontSizeInput.value = savedFontSize;
+  document.documentElement.style.setProperty(
+    "--chat-font-size",
+    `${savedFontSize}px`
+  );
+
+  // Prevent any keydown events from propagating to YouTube player
+  fontSizeInput.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+  });
+
+  // Prevent click and mousedown events from affecting video playback
+  fontSizeInput.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
   
+  fontSizeInput.addEventListener("mousedown", (e) => {
+    e.stopPropagation();
+  });
+  
+  // Prevent scroll events from changing volume
+  fontSizeInput.addEventListener("wheel", (e) => {
+    e.stopPropagation();
+  });
+
+  // Handle font size changes
+  fontSizeInput.addEventListener("input", (e) => {
+    e.stopPropagation();
+    let value = parseInt(e.target.value);
+    
+    // Enforce min/max constraints
+    if (value < 10) value = 10;
+    if (value > 24) value = 24;
+    
+    document.documentElement.style.setProperty(
+      "--chat-font-size",
+      `${value}px`
+    );
+    localStorage.setItem("chatFontSize", value);
+  });
+
+  // Stop propagation for spin buttons
+  fontSizeInput.addEventListener("focus", (e) => {
+    e.stopPropagation();
+  });
+
   // Initialize timestamp toggle
   const timestampToggle = settingsPanel.querySelector("#timestamp-toggle");
-  const timestampsEnabled = localStorage.getItem("chatTimestampsEnabled") !== "false"; // Default to true
-  
+  const timestampsEnabled =
+    localStorage.getItem("chatTimestampsEnabled") !== "false"; // Default to true
+
   // Set initial state
   timestampToggle.checked = timestampsEnabled;
-  document.documentElement.setAttribute("data-timestamps-enabled", timestampsEnabled);
-  
+  document.documentElement.setAttribute(
+    "data-timestamps-enabled",
+    timestampsEnabled
+  );
+
   // Handle toggle changes
   timestampToggle.addEventListener("change", (e) => {
+    e.stopPropagation();
     const enabled = e.target.checked;
     localStorage.setItem("chatTimestampsEnabled", enabled);
     document.documentElement.setAttribute("data-timestamps-enabled", enabled);
-    
+
     // Update existing timestamps in the DOM
     const timestamps = document.querySelectorAll(".chat-message-timestamp");
-    timestamps.forEach(timestamp => {
+    timestamps.forEach((timestamp) => {
       timestamp.style.display = enabled ? "inline" : "none";
     });
+  });
+  
+  // Also prevent events on the entire settings panel
+  settingsPanel.addEventListener("mousedown", (e) => {
+    e.stopPropagation();
+  });
+  
+  settingsPanel.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+  
+  settingsPanel.addEventListener("keydown", (e) => {
+    e.stopPropagation();
   });
 }
 
@@ -96,20 +166,25 @@ function createChatOverlay(videoPlayer) {
   </svg>`;
   dragHandle.appendChild(settingsIcon);
 
-  // Create settings panel
-  const settingsPanel = document.createElement("div");
-  settingsPanel.id = "settings-panel";
-  settingsPanel.innerHTML = `
-    <div class="opacity-control">
-      <label>Opacity:</label>
-      <input type="range" min="10" max="100" value="50" id="opacity-slider">
-    </div>
-    <div class="toggle-control">
-      <label for="timestamp-toggle">Show timestamps:</label>
-      <input type="checkbox" id="timestamp-toggle" checked>
-    </div>
-  `;
-  overlayChatContainer.appendChild(settingsPanel);
+    // Create settings panel
+    const settingsPanel = document.createElement("div");
+    settingsPanel.id = "settings-panel";
+    settingsPanel.innerHTML = `
+        <div class="opacity-control">
+          <label>Opacity:</label>
+          <input type="range" min="10" max="100" value="50" id="opacity-slider">
+        </div>
+        <div class="font-size-control">
+          <label>Font Size:</label>
+          <input type="number" min="10" max="24" value="14" id="font-size-input" class="font-size-input">
+          <span class="font-size-unit">px</span>
+        </div>
+        <div class="toggle-control">
+          <label for="timestamp-toggle">Show timestamps:</label>
+          <input type="checkbox" id="timestamp-toggle" checked>
+        </div>
+      `;
+    overlayChatContainer.appendChild(settingsPanel);
 
   // Create chat messages container
   const chatMessagesContainer = document.createElement("div");
@@ -127,16 +202,15 @@ function createChatOverlay(videoPlayer) {
   // Initialize settings panel
   setupSettingsPanel(settingsIcon, settingsPanel, overlayChatContainer);
 
-
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  
+
   // Get saved positions (as percentages)
   const savedLeft = localStorage.getItem("chatOverlayLeft");
   const savedTop = localStorage.getItem("chatOverlayTop");
   const savedWidth = localStorage.getItem("chatOverlayWidth");
   const savedHeight = localStorage.getItem("chatOverlayHeight");
-  
+
   // Apply saved position or use defaults
   if (savedLeft && savedTop && savedWidth && savedHeight) {
     // Convert percentages to pixels
@@ -144,12 +218,24 @@ function createChatOverlay(videoPlayer) {
     const top = (parseFloat(savedTop) / 100) * viewportHeight;
     const width = (parseFloat(savedWidth) / 100) * viewportWidth;
     const height = (parseFloat(savedHeight) / 100) * viewportHeight;
-    
+
     // Ensure the values are within reasonable bounds
-    overlayChatContainer.style.left = `${Math.max(0, Math.min(left, viewportWidth - 200))}px`;
-    overlayChatContainer.style.top = `${Math.max(0, Math.min(top, viewportHeight - 150))}px`;
-    overlayChatContainer.style.width = `${Math.max(200, Math.min(width, viewportWidth * 0.9))}px`;
-    overlayChatContainer.style.height = `${Math.max(150, Math.min(height, viewportHeight * 0.9))}px`;
+    overlayChatContainer.style.left = `${Math.max(
+      0,
+      Math.min(left, viewportWidth - 200)
+    )}px`;
+    overlayChatContainer.style.top = `${Math.max(
+      0,
+      Math.min(top, viewportHeight - 150)
+    )}px`;
+    overlayChatContainer.style.width = `${Math.max(
+      200,
+      Math.min(width, viewportWidth * 0.9)
+    )}px`;
+    overlayChatContainer.style.height = `${Math.max(
+      150,
+      Math.min(height, viewportHeight * 0.9)
+    )}px`;
   } else {
     // Default position (right side of screen)
     overlayChatContainer.style.right = "5%";
@@ -157,7 +243,7 @@ function createChatOverlay(videoPlayer) {
     overlayChatContainer.style.width = "25%";
     overlayChatContainer.style.height = "80%";
   }
-  
+
   // Make overlay draggable and resizable
   makeDraggable(overlayChatContainer, dragHandle);
   makeResizable(overlayChatContainer, resizeHandle);
@@ -168,19 +254,24 @@ function createChatOverlay(videoPlayer) {
     dragHandle,
     resizeHandle,
     settingsIcon,
-    settingsPanel
+    settingsPanel,
   };
 }
 
 // Toggle the visibility of the chat overlay
-function toggleOverlayChat(liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton) {
+function toggleOverlayChat(
+  liveChatFrame,
+  overlayChatContainer,
+  chatMessagesContainer,
+  toggleButton
+) {
   isOverlayVisible = !isOverlayVisible;
   overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
   overlayChatContainer.classList.toggle("show", isOverlayVisible);
-  
+
   // Update the tooltip and icon instead of text content
   toggleButton.title = isOverlayVisible ? "Hide Chat" : "Show Chat";
-  
+
   // Update icon based on state
   if (isOverlayVisible) {
     toggleButton.innerHTML = `
@@ -202,10 +293,10 @@ function toggleOverlayChat(liveChatFrame, overlayChatContainer, chatMessagesCont
     const debouncedUpdate = debounce(() => {
       updateChatMessages(liveChatFrame, chatMessagesContainer);
     }, 500);
-    
+
     // Update immediately
     debouncedUpdate();
-    
+
     // Setup interval for updates
     clearInterval(updateInterval);
     updateInterval = setInterval(debouncedUpdate, 800);
@@ -218,41 +309,84 @@ function toggleOverlayChat(liveChatFrame, overlayChatContainer, chatMessagesCont
 }
 
 // Initialize the overlay state based on saved preferences
-function initializeOverlayState(overlayChatContainer, liveChatFrame, chatMessagesContainer) {
+function initializeOverlayState(
+  overlayChatContainer,
+  liveChatFrame,
+  chatMessagesContainer
+) {
   const savedState = localStorage.getItem("youtubeOverlayVisible");
-  
+
   if (savedState === "true" && document.fullscreenElement) {
     isOverlayVisible = true;
     overlayChatContainer.style.display = "block";
     overlayChatContainer.classList.add("show");
-    
+
     // Create a debounced update function
     const debouncedUpdate = debounce(() => {
       updateChatMessages(liveChatFrame, chatMessagesContainer);
     }, 500);
-    
+
     // Update immediately
     debouncedUpdate();
-    
+
     // Setup interval
     clearInterval(updateInterval);
     updateInterval = setInterval(debouncedUpdate, 800);
   }
 
   const savedOpacity = localStorage.getItem("chatOverlayOpacity") || 50;
-  overlayChatContainer.style.backgroundColor = `rgba(0, 0, 0, ${savedOpacity / 100})`;
-  
+  overlayChatContainer.style.backgroundColor = `rgba(0, 0, 0, ${
+    savedOpacity / 100
+  })`;
+
+  // Set font size
+  const savedFontSize = localStorage.getItem("chatFontSize") || 14;
+  document.documentElement.style.setProperty(
+    "--chat-font-size",
+    `${savedFontSize}px`
+  );
+
+
   // Reset chat tracking
   resetChatTracking();
 }
 
-// Clean up the overlay and stop any intervals
+// Improve memory management when cleaning up the overlay
 function cleanupOverlay() {
   const existingOverlay = document.getElementById("overlay-chat-container");
   const existingToggleButton = document.getElementById("toggle-chat-overlay");
+
+  if (existingOverlay) {
+    const dragHandle = existingOverlay.querySelector("#drag-handle");
+    const resizeHandle = existingOverlay.querySelector("#resize-handle");
+    const settingsIcon = existingOverlay.querySelector("#settings-icon");
+    
+    if (dragHandle) {
+      const clone = dragHandle.cloneNode(true);
+      dragHandle.parentNode.replaceChild(clone, dragHandle);
+    }
+    
+    if (resizeHandle) {
+      const clone = resizeHandle.cloneNode(true);
+      resizeHandle.parentNode.replaceChild(clone, resizeHandle);
+    }
+    
+    if (settingsIcon) {
+      const clone = settingsIcon.cloneNode(true);
+      settingsIcon.parentNode.replaceChild(clone, settingsIcon);
+    }
+    
+    existingOverlay.remove();
+  }
   
-  if (existingOverlay) existingOverlay.remove();
-  if (existingToggleButton) existingToggleButton.remove();
-  
+  if (existingToggleButton) {
+    const clone = existingToggleButton.cloneNode(true);
+    existingToggleButton.parentNode.replaceChild(clone, existingToggleButton);
+    clone.remove();
+  }
+
   clearInterval(updateInterval);
+  
+  // Clean up message tracking to prevent memory leaks with long streams
+  resetChatTracking();
 }
