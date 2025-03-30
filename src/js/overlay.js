@@ -5,20 +5,26 @@
 // Variables for tracking the overlay state
 let updateInterval;
 let isOverlayVisible = false;
-// Add this function to your overlay.js file
 
 // Create a toggle button for the chat overlay
 function createToggleButton(videoPlayer, toggleCallback) {
   const toggleButton = document.createElement("button");
   toggleButton.id = "toggle-chat-overlay";
-  toggleButton.textContent = isOverlayVisible ? "Hide Chat" : "Show Chat";
+  
+  // Use an SVG icon instead of text
+  toggleButton.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+  `;
+  
+  toggleButton.title = isOverlayVisible ? "Hide Chat" : "Show Chat"; // Add tooltip
   toggleButton.addEventListener("click", toggleCallback);
   
   videoPlayer.appendChild(toggleButton);
   
   return toggleButton;
 }
-// Update the setupSettingsPanel function
 
 function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   // Toggle settings panel visibility
@@ -171,7 +177,25 @@ function toggleOverlayChat(liveChatFrame, overlayChatContainer, chatMessagesCont
   isOverlayVisible = !isOverlayVisible;
   overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
   overlayChatContainer.classList.toggle("show", isOverlayVisible);
-  toggleButton.textContent = isOverlayVisible ? "Hide Chat" : "Show Chat";
+  
+  // Update the tooltip and icon instead of text content
+  toggleButton.title = isOverlayVisible ? "Hide Chat" : "Show Chat";
+  
+  // Update icon based on state
+  if (isOverlayVisible) {
+    toggleButton.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    `;
+  } else {
+    toggleButton.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+    `;
+  }
 
   if (isOverlayVisible) {
     // Create a debounced version of updateChatMessages
