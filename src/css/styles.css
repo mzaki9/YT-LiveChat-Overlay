@@ -174,12 +174,6 @@
   min-width: 0; /* Allow text container to shrink below content size */
 }
 
-.chat-message-timestamp {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: var(--chat-font-size - 2px);
-  margin-right: 6px;
-  font-weight: normal;
-}
 
 .chat-badge {
   width: 16px;
@@ -305,42 +299,6 @@
   margin-top: 10px;
 }
 
-#timestamp-toggle {
-  position: relative;
-  width: 32px;
-  height: 16px;
-  appearance: none;
-  background-color: #555;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s;
-  outline: none;
-}
-
-#timestamp-toggle:checked {
-  background-color: #2196f3;
-}
-
-#timestamp-toggle:before {
-  content: "";
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  top: 2px;
-  left: 2px;
-  background-color: white;
-  transition: all 0.3s;
-}
-
-#timestamp-toggle:checked:before {
-  left: 18px;
-}
-
-/* Define how timestamps behave when disabled using the HTML attribute */
-html[data-timestamps-enabled="false"] .chat-message-timestamp {
-  display: none !important;
-}
 
 @media (max-width: 400px) {
   .chat-message-content {

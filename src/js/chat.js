@@ -32,22 +32,6 @@ function createChatMessageElement(
   // Simplified animation - just a gentle slide-in
   chatMessageElement.style.animation = "messageFadeSimple 0.1s ease forwards";
 
-  // Create time stamp element
-  const timeStamp = document.createElement("span");
-  timeStamp.className = "chat-message-timestamp";
-  const now = new Date();
-  timeStamp.textContent = `${now.getHours().toString().padStart(2, "0")}:${now
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
-
-  // Check if timestamps are enabled
-  const timestampsEnabled =
-    localStorage.getItem("chatTimestampsEnabled") !== "false";
-  if (!timestampsEnabled) {
-    timeStamp.style.display = "none";
-  }
-
   // Profile image with fallback
   const profileImg = document.createElement("img");
   profileImg.className = "chat-message-profile";
@@ -60,7 +44,7 @@ function createChatMessageElement(
       "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
   };
 
-  // Check if avatars are enabled 
+  // Check if avatars are enabled
   const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false";
   if (!avatarsEnabled) {
     profileImg.style.display = "none";
@@ -75,9 +59,6 @@ function createChatMessageElement(
   // Author container with name and badge
   const chatMessageAuthor = document.createElement("div");
   chatMessageAuthor.className = `chat-message-author ${authorClass}`;
-
-  // Add timestamp to author line
-  chatMessageAuthor.appendChild(timeStamp);
 
   if (badgeUrl) {
     const badgeImg = document.createElement("img");

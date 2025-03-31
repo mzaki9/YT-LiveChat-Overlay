@@ -107,32 +107,6 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
     e.stopPropagation();
   });
 
-  // Initialize timestamp toggle
-  const timestampToggle = settingsPanel.querySelector("#timestamp-toggle");
-  const timestampsEnabled =
-    localStorage.getItem("chatTimestampsEnabled") !== "false"; // Default to true
-
-  // Set initial state
-  timestampToggle.checked = timestampsEnabled;
-  document.documentElement.setAttribute(
-    "data-timestamps-enabled",
-    timestampsEnabled
-  );
-
-  // Handle toggle changes
-  timestampToggle.addEventListener("change", (e) => {
-    e.stopPropagation();
-    const enabled = e.target.checked;
-    localStorage.setItem("chatTimestampsEnabled", enabled);
-    document.documentElement.setAttribute("data-timestamps-enabled", enabled);
-
-    // Update existing timestamps in the DOM
-    const timestamps = document.querySelectorAll(".chat-message-timestamp");
-    timestamps.forEach((timestamp) => {
-      timestamp.style.display = enabled ? "inline" : "none";
-    });
-  });
-
   // Also prevent events on the entire settings panel
   settingsPanel.addEventListener("mousedown", (e) => {
     e.stopPropagation();
@@ -146,6 +120,7 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
     e.stopPropagation();
   });
 
+  // Avatar toggle code
   const avatarToggle = settingsPanel.querySelector("#avatar-toggle");
   const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false"; // Default to true
 
@@ -199,10 +174,6 @@ function createChatOverlay(videoPlayer) {
       <label>Font Size:</label>
       <input type="number" min="10" max="24" value="14" id="font-size-input" class="font-size-input">
       <span class="font-size-unit">px</span>
-    </div>
-    <div class="toggle-control">
-      <label for="timestamp-toggle">Show timestamps:</label>
-      <input type="checkbox" id="timestamp-toggle" checked>
     </div>
     <div class="toggle-control">
       <label for="avatar-toggle">Show avatars:</label>
