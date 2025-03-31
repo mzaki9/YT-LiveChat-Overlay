@@ -76,11 +76,11 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   fontSizeInput.addEventListener("click", (e) => {
     e.stopPropagation();
   });
-  
+
   fontSizeInput.addEventListener("mousedown", (e) => {
     e.stopPropagation();
   });
-  
+
   // Prevent scroll events from changing volume
   fontSizeInput.addEventListener("wheel", (e) => {
     e.stopPropagation();
@@ -90,11 +90,11 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   fontSizeInput.addEventListener("input", (e) => {
     e.stopPropagation();
     let value = parseInt(e.target.value);
-    
+
     // Enforce min/max constraints
     if (value < 10) value = 10;
     if (value > 24) value = 24;
-    
+
     document.documentElement.style.setProperty(
       "--chat-font-size",
       `${value}px`
@@ -132,18 +132,39 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
       timestamp.style.display = enabled ? "inline" : "none";
     });
   });
-  
+
   // Also prevent events on the entire settings panel
   settingsPanel.addEventListener("mousedown", (e) => {
     e.stopPropagation();
   });
-  
+
   settingsPanel.addEventListener("click", (e) => {
     e.stopPropagation();
   });
-  
+
   settingsPanel.addEventListener("keydown", (e) => {
     e.stopPropagation();
+  });
+
+  const avatarToggle = settingsPanel.querySelector("#avatar-toggle");
+  const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false"; // Default to true
+
+  // Set initial state
+  avatarToggle.checked = avatarsEnabled;
+  document.documentElement.setAttribute("data-avatars-enabled", avatarsEnabled);
+
+  // Handle toggle changes
+  avatarToggle.addEventListener("change", (e) => {
+    e.stopPropagation();
+    const enabled = e.target.checked;
+    localStorage.setItem("chatAvatarsEnabled", enabled);
+    document.documentElement.setAttribute("data-avatars-enabled", enabled);
+
+    // Update existing avatars in the DOM
+    const avatars = document.querySelectorAll(".chat-message-profile");
+    avatars.forEach((avatar) => {
+      avatar.style.display = enabled ? "block" : "none";
+    });
   });
 }
 
@@ -166,25 +187,29 @@ function createChatOverlay(videoPlayer) {
   </svg>`;
   dragHandle.appendChild(settingsIcon);
 
-    // Create settings panel
-    const settingsPanel = document.createElement("div");
-    settingsPanel.id = "settings-panel";
-    settingsPanel.innerHTML = `
-        <div class="opacity-control">
-          <label>Opacity:</label>
-          <input type="range" min="10" max="100" value="50" id="opacity-slider">
-        </div>
-        <div class="font-size-control">
-          <label>Font Size:</label>
-          <input type="number" min="10" max="24" value="14" id="font-size-input" class="font-size-input">
-          <span class="font-size-unit">px</span>
-        </div>
-        <div class="toggle-control">
-          <label for="timestamp-toggle">Show timestamps:</label>
-          <input type="checkbox" id="timestamp-toggle" checked>
-        </div>
-      `;
-    overlayChatContainer.appendChild(settingsPanel);
+  // Create settings panel
+  const settingsPanel = document.createElement("div");
+  settingsPanel.id = "settings-panel";
+  settingsPanel.innerHTML = `
+    <div class="opacity-control">
+      <label>Opacity:</label>
+      <input type="range" min="10" max="100" value="50" id="opacity-slider">
+    </div>
+    <div class="font-size-control">
+      <label>Font Size:</label>
+      <input type="number" min="10" max="24" value="14" id="font-size-input" class="font-size-input">
+      <span class="font-size-unit">px</span>
+    </div>
+    <div class="toggle-control">
+      <label for="timestamp-toggle">Show timestamps:</label>
+      <input type="checkbox" id="timestamp-toggle" checked>
+    </div>
+    <div class="toggle-control">
+      <label for="avatar-toggle">Show avatars:</label>
+      <input type="checkbox" id="avatar-toggle" checked>
+    </div>
+  `;
+  overlayChatContainer.appendChild(settingsPanel);
 
   // Create chat messages container
   const chatMessagesContainer = document.createElement("div");
@@ -346,6 +371,9 @@ function initializeOverlayState(
     `${savedFontSize}px`
   );
 
+  // Set avatar visibility
+  const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false";
+  document.documentElement.setAttribute("data-avatars-enabled", avatarsEnabled);
 
   // Reset chat tracking
   resetChatTracking();
@@ -360,25 +388,25 @@ function cleanupOverlay() {
     const dragHandle = existingOverlay.querySelector("#drag-handle");
     const resizeHandle = existingOverlay.querySelector("#resize-handle");
     const settingsIcon = existingOverlay.querySelector("#settings-icon");
-    
+
     if (dragHandle) {
       const clone = dragHandle.cloneNode(true);
       dragHandle.parentNode.replaceChild(clone, dragHandle);
     }
-    
+
     if (resizeHandle) {
       const clone = resizeHandle.cloneNode(true);
       resizeHandle.parentNode.replaceChild(clone, resizeHandle);
     }
-    
+
     if (settingsIcon) {
       const clone = settingsIcon.cloneNode(true);
       settingsIcon.parentNode.replaceChild(clone, settingsIcon);
     }
-    
+
     existingOverlay.remove();
   }
-  
+
   if (existingToggleButton) {
     const clone = existingToggleButton.cloneNode(true);
     existingToggleButton.parentNode.replaceChild(clone, existingToggleButton);
@@ -386,7 +414,7 @@ function cleanupOverlay() {
   }
 
   clearInterval(updateInterval);
-  
+
   // Clean up message tracking to prevent memory leaks with long streams
   resetChatTracking();
 }

@@ -187,14 +187,6 @@
   vertical-align: middle;
 }
 
-.font-size-control {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
-  margin-top: 10px;
-}
-
 .font-size-control input {
   width: 100px;
 }
@@ -231,39 +223,6 @@
   background-color: rgba(255, 255, 255, 0.8);
   width: 18px;
   height: 18px;
-}
-
-.resize-handle.horizontal {
-  cursor: ew-resize;
-  width: 8px;
-  height: calc(100% - 16px);
-  right: 0;
-  top: 8px;
-  border-radius: 0 4px 4px 0;
-}
-
-.resize-handle.vertical {
-  cursor: ns-resize;
-  height: 8px;
-  width: calc(100% - 16px);
-  bottom: 0;
-  left: 8px;
-  border-radius: 0 0 4px 4px;
-}
-
-.resize-handle.corner {
-  cursor: nwse-resize;
-  width: 16px;
-  height: 16px;
-  right: 0;
-  bottom: 0;
-  border-radius: 0 0 4px 0;
-  background-color: rgba(255, 255, 255, 0.5);
-}
-
-.chat-container.resizing {
-  user-select: none;
-  transition: none;
 }
 
 /* Styling the scrollbar for webkit browsers */
@@ -330,18 +289,6 @@
   width: 100px;
 }
 
-/* Add these CSS rules to match our resize-handle ID */
-#resize-handle {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 16px;
-  height: 16px;
-  background-color: rgba(255, 255, 255, 0.5);
-  cursor: nwse-resize;
-  border-radius: 0 0 4px 0;
-  z-index: 100;
-}
 
 #resize-handle:hover {
   background-color: rgba(255, 255, 255, 0.7);
@@ -433,12 +380,6 @@ html[data-timestamps-enabled="false"] .chat-message-timestamp {
   text-align: center;
 }
 
-.font-size-input:focus {
-  outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
 /* Custom spinner buttons styling */
 .font-size-input::-webkit-inner-spin-button,
 .font-size-input::-webkit-outer-spin-button {
@@ -457,14 +398,18 @@ html[data-timestamps-enabled="false"] .chat-message-timestamp {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Custom spinner buttons styling */
-.font-size-input::-webkit-inner-spin-button,
-.font-size-input::-webkit-outer-spin-button {
-  opacity: 1;
-  height: 24px;
+
+
+html[data-avatars-enabled="false"] .chat-message-profile {
+  display: none !important;
 }
 
-.font-size-unit {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
+/* Adjust spacing when avatars are hidden */
+html[data-avatars-enabled="false"] .chat-message {
+  padding-left: 0;
+}
+
+/* Adjust message container when avatars are hidden */
+html[data-avatars-enabled="false"] .chat-message-content {
+  margin-left: 5px;
 }
