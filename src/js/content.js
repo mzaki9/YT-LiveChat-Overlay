@@ -116,12 +116,10 @@ if (document.readyState === "complete") {
   });
 }
 
-// More reliable chat iframe detection for SPAs
-const urlObserver = new MutationObserver((mutations) => {
+const urlObserver = new MutationObserver(debounce((mutations) => {
   // Check if URL has changed (for YouTube SPA navigation)
   if (location.href !== lastUrl) {
     lastUrl = location.href;
-    // log("URL changed, looking for chat frame");
     // Allow some time for YouTube to load the new page
     setTimeout(() => {
       liveChatFrame = findChatFrame();
@@ -130,21 +128,7 @@ const urlObserver = new MutationObserver((mutations) => {
       }
     }, 1500);
   }
-  
-  // Also look for chat frames that might have been dynamically added
-  for (const mutation of mutations) {
-    if (mutation.type === 'childList' && mutation.addedNodes.length) {
-      // Check if any of the added nodes or their children could be a chat frame
-      const chatFrame = findChatFrame();
-      if (chatFrame && chatFrame !== liveChatFrame) {
-        // log("Chat frame dynamically added");
-        liveChatFrame = chatFrame;
-        injectLiveChatOverlay();
-        break;
-      }
-    }
-  }
-});
+}, 250))
 
 // Start observing with necessary parameters
 let lastUrl = location.href;

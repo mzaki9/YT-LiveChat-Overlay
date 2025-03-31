@@ -112,6 +112,7 @@
 }
 
 .chat-message {
+  will-change: opacity, transform;
   display: flex;
   align-items: flex-start;
   width: 100%;

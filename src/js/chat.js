@@ -48,11 +48,6 @@ function createChatMessageElement(
     timeStamp.style.display = "none";
   }
 
-  const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false";
-  if (!avatarsEnabled) {
-    profileImg.style.display = "none";
-  }
-
   // Profile image with fallback
   const profileImg = document.createElement("img");
   profileImg.className = "chat-message-profile";
@@ -64,6 +59,13 @@ function createChatMessageElement(
     this.src =
       "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
   };
+
+  // Check if avatars are enabled 
+  const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false";
+  if (!avatarsEnabled) {
+    profileImg.style.display = "none";
+  }
+
   chatMessageElement.appendChild(profileImg);
 
   const chatMessageContent = document.createElement("div");
@@ -98,75 +100,67 @@ function createChatMessageElement(
   return chatMessageElement;
 }
 
-// Function to extract and display chat messages
 function updateChatMessages(liveChatFrame, chatMessagesContainer) {
   const chatDocument = liveChatFrame.contentDocument;
-  if (!chatDocument) return;
+  if (!chatDocument) return false;
 
-  const chatItems = chatDocument.querySelectorAll(
+  const MAX_NEW_MESSAGES = 30;
+  const chatItems = Array.from(chatDocument.querySelectorAll(
     "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer"
-  );
-
+  )).slice(-MAX_NEW_MESSAGES);
+  
   // Process new messages only
   let newMessages = [];
+  
+  for (const item of chatItems) {
+    const messageId = item.getAttribute('id');
+    if (!messageId || processedMessageIds.has(messageId)) continue;
+    
+    processedMessageIds.add(messageId);
+    
+    const authorName = item.querySelector("#author-name")?.textContent || "Unknown";
+    const authorPhoto = item.querySelector("#img")?.src || "";
+    const badgeElement = item.querySelector("yt-live-chat-author-badge-renderer #img");
+    const messageElement = item.querySelector("#message")?.cloneNode(true) || document.createTextNode("");
 
-  chatItems.forEach((item) => {
-    const messageId = item.getAttribute("id");
-    if (messageId && !processedMessageIds.has(messageId)) {
-      processedMessageIds.add(messageId);
+    const authorClass = getChatMessageAuthorClass(item);
 
-      const authorName =
-        item.querySelector("#author-name")?.textContent || "Unknown";
-      const authorPhoto = item.querySelector("#img")?.src || "";
-      const badgeElement = item.querySelector(
-        "yt-live-chat-author-badge-renderer #img"
-      );
-      const messageElement =
-        item.querySelector("#message")?.cloneNode(true) ||
-        document.createTextNode("");
-
-      const authorClass = getChatMessageAuthorClass(item);
-
-      const chatMessageElement = createChatMessageElement(
-        authorName,
-        authorPhoto,
-        badgeElement?.src,
-        messageElement,
-        authorClass
-      );
-
-      newMessages.push(chatMessageElement);
-      lastMessageId = messageId;
-    }
-  });
-
-  // Add new messages smoothly
-  if (newMessages.length > 0) {
-    // Check if we're near the bottom before adding messages
-    const isAtBottom =
-      chatMessagesContainer.scrollTop + chatMessagesContainer.clientHeight >=
-      chatMessagesContainer.scrollHeight - 50;
-
-    // Add all new messages at once to reduce layout thrashing
-    const fragment = document.createDocumentFragment();
-    newMessages.forEach((msg) => fragment.appendChild(msg));
-    chatMessagesContainer.appendChild(fragment);
-
-    // Remove old messages if we exceed our limit
-    while (chatMessagesContainer.children.length > MAX_MESSAGES) {
-      chatMessagesContainer.firstChild.remove();
-    }
-
-    // Auto-scroll only if we were already at the bottom
-    if (isAtBottom) {
-      chatMessagesContainer.scrollTo({
-        top: chatMessagesContainer.scrollHeight,
-        behavior: "smooth",
-      });
-    }
+    const chatMessageElement = createChatMessageElement(
+      authorName,
+      authorPhoto,
+      badgeElement?.src,
+      messageElement,
+      authorClass
+    );
+    
+    newMessages.push(chatMessageElement);
   }
 
-  return newMessages.length > 0;
+  // Check if we have any new messages to add
+  if (newMessages.length === 0) return false;
+
+  // Check if we're near the bottom before adding messages
+  const isAtBottom = chatMessagesContainer.scrollTop + chatMessagesContainer.clientHeight >= 
+                    chatMessagesContainer.scrollHeight - 50;
+  
+  // Use DocumentFragment for better performance
+  const fragment = document.createDocumentFragment();
+  newMessages.forEach(msg => fragment.appendChild(msg));
+  chatMessagesContainer.appendChild(fragment);
+  
+  while (chatMessagesContainer.childElementCount > MAX_MESSAGES) {
+    chatMessagesContainer.firstElementChild.remove();
+  }
+  
+  // Auto-scroll only if we were already at the bottom
+  if (isAtBottom) {
+    // Use requestAnimationFrame for smoother scrolling
+    requestAnimationFrame(() => {
+      chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    });
+  }
+  
+  return true;
 }
 
 // Clear chat message tracking variables
