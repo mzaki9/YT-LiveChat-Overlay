@@ -7,6 +7,15 @@
   overflow: auto !important;
 }
 
+
+.ytp-fullscreen html[data-colorful-enabled="true"] .chat-message-author:not(.author-member):not(.author-moderator) {
+  color: var(--author-color, white);
+}
+
+.ytp-fullscreen html[data-colorful-enabled="false"] .chat-message-author:not(.author-member):not(.author-moderator) {
+  color: white;
+}
+
 #overlay-chat-container {
   display: none;
   position: absolute;

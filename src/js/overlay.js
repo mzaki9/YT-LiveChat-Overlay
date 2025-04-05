@@ -141,6 +141,35 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
       avatar.style.display = enabled ? "block" : "none";
     });
   });
+
+  const colorfulToggle = settingsPanel.querySelector("#colorful-toggle");
+  const colorfulEnabled = localStorage.getItem("chatColorfulEnabled") !== "false"; // Default to true
+
+  // Set initial state
+  colorfulToggle.checked = colorfulEnabled;
+  document.documentElement.setAttribute("data-colorful-enabled", colorfulEnabled);
+
+  // Handle toggle changes
+  colorfulToggle.addEventListener("change", (e) => {
+    e.stopPropagation();
+    const enabled = e.target.checked;
+    localStorage.setItem("chatColorfulEnabled", enabled);
+    document.documentElement.setAttribute("data-colorful-enabled", enabled);
+    
+    // Update existing username colors in the DOM
+    const authorElements = document.querySelectorAll(".chat-message-author:not(.author-member):not(.author-moderator)");
+    authorElements.forEach((author) => {
+      if (enabled) {
+        // Apply color based on name
+        const authorName = author.textContent.trim();
+        const color = getColorFromName(authorName);
+        author.style.color = color;
+      } else {
+        // Reset to default color
+        author.style.color = "";
+      }
+    });
+  });
 }
 
 // Create the chat overlay and return elements
@@ -178,6 +207,10 @@ function createChatOverlay(videoPlayer) {
     <div class="toggle-control">
       <label for="avatar-toggle">Show avatars:</label>
       <input type="checkbox" id="avatar-toggle" checked>
+    </div>
+    <div class="toggle-control">
+      <label for="colorful-toggle">Colorful usernames:</label>
+      <input type="checkbox" id="colorful-toggle" checked>
     </div>
   `;
   overlayChatContainer.appendChild(settingsPanel);
@@ -345,6 +378,10 @@ function initializeOverlayState(
   // Set avatar visibility
   const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false";
   document.documentElement.setAttribute("data-avatars-enabled", avatarsEnabled);
+
+  // Set colorful usernames visibility
+  const colorfulEnabled = localStorage.getItem("chatColorfulEnabled") !== "false";
+  document.documentElement.setAttribute("data-colorful-enabled", colorfulEnabled);
 
   // Reset chat tracking
   resetChatTracking();

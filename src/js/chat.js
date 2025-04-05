@@ -52,6 +52,8 @@ function createChatMessageElement(
     profileImg.style.display = "none";
   }
 
+  
+
   chatMessageElement.appendChild(profileImg);
 
   const chatMessageContent = document.createElement("div");
@@ -61,6 +63,13 @@ function createChatMessageElement(
   // Author container with name and badge
   const chatMessageAuthor = document.createElement("div");
   chatMessageAuthor.className = `chat-message-author ${authorClass}`;
+
+  if (!authorClass) {
+    const colorfulEnabled = localStorage.getItem("chatColorfulEnabled") !== "false";
+    if (colorfulEnabled) {
+      chatMessageAuthor.style.color = getColorFromName(authorName);
+    }
+  }
 
   if (badgeUrl) {
     const badgeImg = document.createElement("img");
