@@ -4,8 +4,10 @@
 
 // Variables to track chat messages
 let lastMessageId = null;
-let processedMessageIds = new Set();
+const processedMessageIds = [];
 const MAX_MESSAGES = 100;
+// Maximum size for the sliding window of processed IDs
+const MAX_PROCESSED_IDS = 500;
 
 // Determine author class based on YouTube's classes
 function getChatMessageAuthorClass(item) {
@@ -81,6 +83,24 @@ function createChatMessageElement(
   return chatMessageElement;
 }
 
+// Check if a message ID is in our sliding window
+function isMessageProcessed(messageId) {
+  return processedMessageIds.includes(messageId);
+}
+
+// Add a message ID to our sliding window, removing old ones if needed
+function addProcessedMessageId(messageId) {
+  // Add the new ID
+  processedMessageIds.push(messageId);
+  
+  // If we've exceeded our window size, remove oldest entries
+  if (processedMessageIds.length > MAX_PROCESSED_IDS) {
+    // Remove ~20% of oldest IDs when we hit the limit
+    const removeCount = Math.floor(MAX_PROCESSED_IDS * 0.2);
+    processedMessageIds.splice(0, removeCount);
+  }
+}
+
 function updateChatMessages(liveChatFrame, chatMessagesContainer) {
   const chatDocument = liveChatFrame.contentDocument;
   if (!chatDocument) return false;
@@ -95,9 +115,9 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
   
   for (const item of chatItems) {
     const messageId = item.getAttribute('id');
-    if (!messageId || processedMessageIds.has(messageId)) continue;
+    if (!messageId || isMessageProcessed(messageId)) continue;
     
-    processedMessageIds.add(messageId);
+    addProcessedMessageId(messageId);
     
     const authorName = item.querySelector("#author-name")?.textContent || "Unknown";
     const authorPhoto = item.querySelector("#img")?.src || "";
@@ -147,5 +167,5 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
 // Clear chat message tracking variables
 function resetChatTracking() {
   lastMessageId = null;
-  processedMessageIds.clear();
+  processedMessageIds.length = 0; // Clear the array
 }
