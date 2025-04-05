@@ -7,6 +7,15 @@
   overflow: auto !important;
 }
 
+
+.ytp-fullscreen html[data-colorful-enabled="true"] .chat-message-author:not(.author-member):not(.author-moderator) {
+  color: var(--author-color, white);
+}
+
+.ytp-fullscreen html[data-colorful-enabled="false"] .chat-message-author:not(.author-member):not(.author-moderator) {
+  color: white;
+}
+
 #overlay-chat-container {
   display: none;
   position: absolute;
@@ -112,6 +121,7 @@
 }
 
 .chat-message {
+  will-change: opacity, transform;
   display: flex;
   align-items: flex-start;
   width: 100%;
@@ -157,8 +167,8 @@
 }
 .chat-message-author {
   font-weight: bold;
-  margin-right: 6px; /* Add spacing between author and message */
-  margin-bottom: 0; /* Remove bottom margin previously used for vertical stacking */
+  margin-right: 6px; 
+  margin-bottom: 0;
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -173,26 +183,14 @@
   min-width: 0; /* Allow text container to shrink below content size */
 }
 
-.chat-message-timestamp {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: var(--chat-font-size - 2px);
-  margin-right: 6px;
-  font-weight: normal;
-}
 
 .chat-badge {
   width: 16px;
   height: 16px;
-  margin-right: 4px;
+  margin-left: 6px; 
   vertical-align: middle;
-}
-
-.font-size-control {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
-  margin-top: 10px;
+  border-radius: 3px;
+  object-fit: contain;
 }
 
 .font-size-control input {
@@ -231,39 +229,6 @@
   background-color: rgba(255, 255, 255, 0.8);
   width: 18px;
   height: 18px;
-}
-
-.resize-handle.horizontal {
-  cursor: ew-resize;
-  width: 8px;
-  height: calc(100% - 16px);
-  right: 0;
-  top: 8px;
-  border-radius: 0 4px 4px 0;
-}
-
-.resize-handle.vertical {
-  cursor: ns-resize;
-  height: 8px;
-  width: calc(100% - 16px);
-  bottom: 0;
-  left: 8px;
-  border-radius: 0 0 4px 4px;
-}
-
-.resize-handle.corner {
-  cursor: nwse-resize;
-  width: 16px;
-  height: 16px;
-  right: 0;
-  bottom: 0;
-  border-radius: 0 0 4px 0;
-  background-color: rgba(255, 255, 255, 0.5);
-}
-
-.chat-container.resizing {
-  user-select: none;
-  transition: none;
 }
 
 /* Styling the scrollbar for webkit browsers */
@@ -330,18 +295,6 @@
   width: 100px;
 }
 
-/* Add these CSS rules to match our resize-handle ID */
-#resize-handle {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 16px;
-  height: 16px;
-  background-color: rgba(255, 255, 255, 0.5);
-  cursor: nwse-resize;
-  border-radius: 0 0 4px 0;
-  z-index: 100;
-}
 
 #resize-handle:hover {
   background-color: rgba(255, 255, 255, 0.7);
@@ -357,42 +310,6 @@
   margin-top: 10px;
 }
 
-#timestamp-toggle {
-  position: relative;
-  width: 32px;
-  height: 16px;
-  appearance: none;
-  background-color: #555;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s;
-  outline: none;
-}
-
-#timestamp-toggle:checked {
-  background-color: #2196f3;
-}
-
-#timestamp-toggle:before {
-  content: "";
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  top: 2px;
-  left: 2px;
-  background-color: white;
-  transition: all 0.3s;
-}
-
-#timestamp-toggle:checked:before {
-  left: 18px;
-}
-
-/* Define how timestamps behave when disabled using the HTML attribute */
-html[data-timestamps-enabled="false"] .chat-message-timestamp {
-  display: none !important;
-}
 
 @media (max-width: 400px) {
   .chat-message-content {
@@ -433,12 +350,6 @@ html[data-timestamps-enabled="false"] .chat-message-timestamp {
   text-align: center;
 }
 
-.font-size-input:focus {
-  outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
 /* Custom spinner buttons styling */
 .font-size-input::-webkit-inner-spin-button,
 .font-size-input::-webkit-outer-spin-button {
@@ -457,14 +368,18 @@ html[data-timestamps-enabled="false"] .chat-message-timestamp {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Custom spinner buttons styling */
-.font-size-input::-webkit-inner-spin-button,
-.font-size-input::-webkit-outer-spin-button {
-  opacity: 1;
-  height: 24px;
+
+
+html[data-avatars-enabled="false"] .chat-message-profile {
+  display: none !important;
 }
 
-.font-size-unit {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
+/* Adjust spacing when avatars are hidden */
+html[data-avatars-enabled="false"] .chat-message {
+  padding-left: 0;
+}
+
+/* Adjust message container when avatars are hidden */
+html[data-avatars-enabled="false"] .chat-message-content {
+  margin-left: 5px;
 }

@@ -4,8 +4,10 @@
 
 // Variables to track chat messages
 let lastMessageId = null;
-let processedMessageIds = new Set();
+const processedMessageIds = [];
 const MAX_MESSAGES = 100;
+// Maximum size for the sliding window of processed IDs
+const MAX_PROCESSED_IDS = 500;
 
 // Determine author class based on YouTube's classes
 function getChatMessageAuthorClass(item) {
@@ -28,30 +30,30 @@ function createChatMessageElement(
 ) {
   const chatMessageElement = document.createElement("div");
   chatMessageElement.className = "chat-message";
-  
+
   // Simplified animation - just a gentle slide-in
   chatMessageElement.style.animation = "messageFadeSimple 0.1s ease forwards";
 
-  // Create time stamp element
-  const timeStamp = document.createElement("span");
-  timeStamp.className = "chat-message-timestamp";
-  const now = new Date();
-  timeStamp.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-  
-  // Check if timestamps are enabled
-  const timestampsEnabled = localStorage.getItem("chatTimestampsEnabled") !== "false";
-  if (!timestampsEnabled) {
-    timeStamp.style.display = "none";
-  }
-  
   // Profile image with fallback
   const profileImg = document.createElement("img");
   profileImg.className = "chat-message-profile";
-  profileImg.src = authorPhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
+  profileImg.src =
+    authorPhoto ||
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
   profileImg.alt = authorName;
-  profileImg.onerror = function() {
-    this.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
+  profileImg.onerror = function () {
+    this.src =
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
   };
+
+  // Check if avatars are enabled
+  const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false";
+  if (!avatarsEnabled) {
+    profileImg.style.display = "none";
+  }
+
+  
+
   chatMessageElement.appendChild(profileImg);
 
   const chatMessageContent = document.createElement("div");
@@ -61,10 +63,20 @@ function createChatMessageElement(
   // Author container with name and badge
   const chatMessageAuthor = document.createElement("div");
   chatMessageAuthor.className = `chat-message-author ${authorClass}`;
-  
-  // Add timestamp to author line
-  chatMessageAuthor.appendChild(timeStamp);
-  
+
+  if (!authorClass) {
+    const colorfulEnabled = localStorage.getItem("chatColorfulEnabled") !== "false";
+    if (colorfulEnabled) {
+      chatMessageAuthor.style.color = getColorFromName(authorName);
+    }
+  }
+
+ 
+
+  const authorText = document.createTextNode(authorName);
+  chatMessageAuthor.appendChild(authorText);
+  chatMessageContent.appendChild(chatMessageAuthor);
+
   if (badgeUrl) {
     const badgeImg = document.createElement("img");
     badgeImg.className = "chat-badge";
@@ -72,10 +84,6 @@ function createChatMessageElement(
     badgeImg.alt = "Badge";
     chatMessageAuthor.appendChild(badgeImg);
   }
-
-  const authorText = document.createTextNode(authorName);
-  chatMessageAuthor.appendChild(authorText);
-  chatMessageContent.appendChild(chatMessageAuthor);
 
   // Message text
   const messageContainer = document.createElement("div");
@@ -86,75 +94,111 @@ function createChatMessageElement(
   return chatMessageElement;
 }
 
-// Function to extract and display chat messages
+// Check if a message ID is in our sliding window
+function isMessageProcessed(messageId) {
+  return processedMessageIds.includes(messageId);
+}
+
+// Add a message ID to our sliding window, removing old ones if needed
+function addProcessedMessageId(messageId) {
+  // Add the new ID
+  processedMessageIds.push(messageId);
+  
+  // If we've exceeded our window size, remove oldest entries
+  if (processedMessageIds.length > MAX_PROCESSED_IDS) {
+    // Remove ~20% of oldest IDs when we hit the limit
+    const removeCount = Math.floor(MAX_PROCESSED_IDS * 0.2);
+    processedMessageIds.splice(0, removeCount);
+  }
+}
+
 function updateChatMessages(liveChatFrame, chatMessagesContainer) {
   const chatDocument = liveChatFrame.contentDocument;
-  if (!chatDocument) return;
+  if (!chatDocument) return false;
 
-  const chatItems = chatDocument.querySelectorAll(
+  const MAX_NEW_MESSAGES = 30;
+  const chatItems = Array.from(chatDocument.querySelectorAll(
     "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer"
-  );
+  )).slice(-MAX_NEW_MESSAGES);
   
   // Process new messages only
   let newMessages = [];
   
-  chatItems.forEach((item) => {
+  for (const item of chatItems) {
     const messageId = item.getAttribute('id');
-    if (messageId && !processedMessageIds.has(messageId)) {
-      processedMessageIds.add(messageId);
-      
-      const authorName = item.querySelector("#author-name")?.textContent || "Unknown";
-      const authorPhoto = item.querySelector("#img")?.src || "";
-      const badgeElement = item.querySelector(
-        "yt-live-chat-author-badge-renderer #img"
-      );
-      const messageElement = item.querySelector("#message")?.cloneNode(true) || document.createTextNode("");
-  
-      const authorClass = getChatMessageAuthorClass(item);
-  
-      const chatMessageElement = createChatMessageElement(
-        authorName,
-        authorPhoto,
-        badgeElement?.src,
-        messageElement,
-        authorClass
-      );
-      
-      newMessages.push(chatMessageElement);
-      lastMessageId = messageId;
-    }
-  });
+    if (!messageId || isMessageProcessed(messageId)) continue;
+    
+    addProcessedMessageId(messageId);
+    
+    const authorName = item.querySelector("#author-name")?.textContent || "Unknown";
+    const authorPhoto = item.querySelector("#img")?.src || "";
 
-  // Add new messages smoothly
-  if (newMessages.length > 0) {
-    // Check if we're near the bottom before adding messages
-    const isAtBottom = chatMessagesContainer.scrollTop + chatMessagesContainer.clientHeight >= 
-                       chatMessagesContainer.scrollHeight - 50;
+    let badgeUrl = null;
     
-    // Add all new messages at once to reduce layout thrashing
-    const fragment = document.createDocumentFragment();
-    newMessages.forEach(msg => fragment.appendChild(msg));
-    chatMessagesContainer.appendChild(fragment);
-    
-    // Remove old messages if we exceed our limit
-    while (chatMessagesContainer.children.length > MAX_MESSAGES) {
-      chatMessagesContainer.firstChild.remove();
+    // First look for the badge image inside a div with id="image"
+    const badgeDiv = item.querySelector("yt-live-chat-author-badge-renderer #image");
+    if (badgeDiv) {
+      const badgeImg = badgeDiv.querySelector("img");
+      if (badgeImg && badgeImg.src) {
+        badgeUrl = badgeImg.src;
+      }
     }
     
-    // Auto-scroll only if we were already at the bottom
-    if (isAtBottom) {
-      chatMessagesContainer.scrollTo({
-        top: chatMessagesContainer.scrollHeight,
-        behavior: 'smooth'
-      });
+    // If not found, try direct img selector as fallback
+    if (!badgeUrl) {
+      const badgeImg = item.querySelector("yt-live-chat-author-badge-renderer img");
+      if (badgeImg && badgeImg.src) {
+        badgeUrl = badgeImg.src;
+      }
     }
+
+    console.log("Badge URL:", badgeUrl); // Debugging line
+   
+
+    const messageElement = item.querySelector("#message")?.cloneNode(true) || document.createTextNode("");
+
+    const authorClass = getChatMessageAuthorClass(item);
+
+    const chatMessageElement = createChatMessageElement(
+      authorName,
+      authorPhoto,
+      badgeUrl,
+      messageElement,
+      authorClass
+    );
+    
+    newMessages.push(chatMessageElement);
+  }
+
+  // Check if we have any new messages to add
+  if (newMessages.length === 0) return false;
+
+  // Check if we're near the bottom before adding messages
+  const isAtBottom = chatMessagesContainer.scrollTop + chatMessagesContainer.clientHeight >= 
+                    chatMessagesContainer.scrollHeight - 50;
+  
+  // Use DocumentFragment for better performance
+  const fragment = document.createDocumentFragment();
+  newMessages.forEach(msg => fragment.appendChild(msg));
+  chatMessagesContainer.appendChild(fragment);
+  
+  while (chatMessagesContainer.childElementCount > MAX_MESSAGES) {
+    chatMessagesContainer.firstElementChild.remove();
   }
   
-  return newMessages.length > 0;
+  // Auto-scroll only if we were already at the bottom
+  if (isAtBottom) {
+    // Use requestAnimationFrame for smoother scrolling
+    requestAnimationFrame(() => {
+      chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    });
+  }
+  
+  return true;
 }
 
 // Clear chat message tracking variables
 function resetChatTracking() {
   lastMessageId = null;
-  processedMessageIds.clear();
+  processedMessageIds.length = 0; // Clear the array
 }
