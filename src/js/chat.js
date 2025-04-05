@@ -71,6 +71,12 @@ function createChatMessageElement(
     }
   }
 
+ 
+
+  const authorText = document.createTextNode(authorName);
+  chatMessageAuthor.appendChild(authorText);
+  chatMessageContent.appendChild(chatMessageAuthor);
+
   if (badgeUrl) {
     const badgeImg = document.createElement("img");
     badgeImg.className = "chat-badge";
@@ -78,10 +84,6 @@ function createChatMessageElement(
     badgeImg.alt = "Badge";
     chatMessageAuthor.appendChild(badgeImg);
   }
-
-  const authorText = document.createTextNode(authorName);
-  chatMessageAuthor.appendChild(authorText);
-  chatMessageContent.appendChild(chatMessageAuthor);
 
   // Message text
   const messageContainer = document.createElement("div");
@@ -130,7 +132,29 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     
     const authorName = item.querySelector("#author-name")?.textContent || "Unknown";
     const authorPhoto = item.querySelector("#img")?.src || "";
-    const badgeElement = item.querySelector("yt-live-chat-author-badge-renderer #img");
+
+    let badgeUrl = null;
+    
+    // First look for the badge image inside a div with id="image"
+    const badgeDiv = item.querySelector("yt-live-chat-author-badge-renderer #image");
+    if (badgeDiv) {
+      const badgeImg = badgeDiv.querySelector("img");
+      if (badgeImg && badgeImg.src) {
+        badgeUrl = badgeImg.src;
+      }
+    }
+    
+    // If not found, try direct img selector as fallback
+    if (!badgeUrl) {
+      const badgeImg = item.querySelector("yt-live-chat-author-badge-renderer img");
+      if (badgeImg && badgeImg.src) {
+        badgeUrl = badgeImg.src;
+      }
+    }
+
+    console.log("Badge URL:", badgeUrl); // Debugging line
+   
+
     const messageElement = item.querySelector("#message")?.cloneNode(true) || document.createTextNode("");
 
     const authorClass = getChatMessageAuthorClass(item);
@@ -138,7 +162,7 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     const chatMessageElement = createChatMessageElement(
       authorName,
       authorPhoto,
-      badgeElement?.src,
+      badgeUrl,
       messageElement,
       authorClass
     );

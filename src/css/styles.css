@@ -167,8 +167,8 @@
 }
 .chat-message-author {
   font-weight: bold;
-  margin-right: 6px; /* Add spacing between author and message */
-  margin-bottom: 0; /* Remove bottom margin previously used for vertical stacking */
+  margin-right: 6px; 
+  margin-bottom: 0;
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -187,8 +187,10 @@
 .chat-badge {
   width: 16px;
   height: 16px;
-  margin-right: 4px;
+  margin-left: 6px; 
   vertical-align: middle;
+  border-radius: 3px;
+  object-fit: contain;
 }
 
 .font-size-control input {
