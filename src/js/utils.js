@@ -28,33 +28,29 @@ function debounce(func, wait) {
   }
 
   function getColorFromName(name) {
-    // Generate a predictable hash from the name
     let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const len = Math.min(name.length, 8);
+    for (let i = 0; i < len; i++) {
+      hash = (hash * 31 + name.charCodeAt(i)) & 0xFFFFFFFF;
     }
     
-    // Convert to HSL for better readability
-    // Use hue 0-360, high saturation, lightness between 45-80%
-    const h = Math.abs(hash) % 360;
-    const s = 70 + (Math.abs(hash) % 20); // 70-90%
-    const l = 60 + (Math.abs(hash) % 15); // 60-75%
-    
-    // Avoid colors that are too similar to moderator blue or member green
-    // Moderator is around 220° (blue), Member is around 120° (green)
-    const avoidHues = [
+    const avoidRanges = [
       [100, 140], // green area (for members)
       [200, 240]  // blue area (for moderators)
     ];
     
+    const h = (hash >>> 0) % 360;
+    const s = 70 + ((hash >>> 0) % 20); 
+    const l = 60 + ((hash >>> 0) % 15);
+    
     let finalHue = h;
-    for (const [min, max] of avoidHues) {
+    for (const [min, max] of avoidRanges) {
       if (h >= min && h <= max) {
-        // Shift the hue outside these ranges
         finalHue = (h + 120) % 360;
         break;
       }
     }
     
+    // Use template literal only once at the end
     return `hsl(${finalHue}, ${s}%, ${l}%)`;
   }
