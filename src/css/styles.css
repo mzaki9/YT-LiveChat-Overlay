@@ -123,9 +123,8 @@
 .chat-message {
   will-change: opacity, transform;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   width: 100%;
-  /* background-color: rgba(40, 40, 40, 0.3); */
   box-sizing: border-box;
   border-radius: 8px;
   margin-bottom: 3px;
@@ -133,7 +132,6 @@
   color: white;
   transform: none;
   transition: background-color 0.1s ease;
-  /* Replace the old animation with a simpler one */
   animation: messageFadeSimple 0.1s ease forwards;
   opacity: 0;
 }
@@ -150,12 +148,13 @@
 }
 
 .chat-message-profile {
-  width: 28px;
-  height: 28px;
+  width: calc(var(--chat-font-size) * 2);
+  height: calc(var(--chat-font-size) * 2);
   border-radius: 50%;
   margin-right: 10px;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Add subtle border */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  align-self: center;
 }
 
 .chat-message-content {
@@ -165,6 +164,7 @@
   flex-wrap: wrap;
   flex-grow: 1;
   gap: 4px; 
+  min-height: calc(var(--chat-font-size) * 2);
 }
 
 
@@ -173,9 +173,10 @@
   margin-right: 0;
   margin-bottom: 0;
   white-space: nowrap;
-  display: flex;
-  align-items: center;
+  display: inline-flex; 
   font-size: var(--chat-font-size);
+  line-height: 1.2; 
+  align-items: center;
 }
 
 .chat-emoticon {
@@ -186,26 +187,24 @@
   margin: 0 0.1em;
 }
 
+.chat-badge {
+  width: calc(var(--chat-font-size) * 1.1);
+  height: calc(var(--chat-font-size) * 1.1);
+  vertical-align: middle;
+  border-radius: 3px;
+  object-fit: contain;
+  display: inline-flex;
+  align-self: center;
+}
+
 .chat-message-text {
   word-break: break-word;
   font-size: var(--chat-font-size);
   line-height: 1.4;
   flex: 1 1 auto;
   min-width: 0;
-  display: inline-flex; /* Change to inline-flex for better alignment */
-  align-items: center; /* Center align with other elements */
-}
-
-
-.chat-badge {
-  width: 16px;
-  height: 16px;
-  margin-left: 0; /* Remove margin-left since we're using gap */
-  vertical-align: middle;
-  border-radius: 3px;
-  object-fit: contain;
-  display: inline-flex; /* Make badges inline-flex for better alignment */
-  align-self: center; /* Ensure vertical centering */
+  display: inline-flex;
+  align-items: center;
 }
 
 .font-size-control input {
