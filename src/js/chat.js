@@ -4,7 +4,7 @@
 
 // Variables to track chat messages
 let lastMessageId = null;
-const processedMessageIds = [];
+let processedMessageIds = new Set();
 const MAX_MESSAGES = 100;
 const MAX_NEW_MESSAGES = 100;
 // Maximum size for the sliding window of processed IDs
@@ -72,19 +72,19 @@ function createChatMessageElement(authorName, authorPhoto, badgeUrl, messageText
 
 // Check if a message ID is in our sliding window
 function isMessageProcessed(messageId) {
-  return processedMessageIds.includes(messageId);
+  return processedMessageIds.has(messageId);
 }
+
 
 // Add a message ID to our sliding window, removing old ones if needed
 function addProcessedMessageId(messageId) {
-  // Add the new ID
-  processedMessageIds.push(messageId);
+  processedMessageIds.add(messageId);
   
   // If we've exceeded our window size, remove oldest entries
-  if (processedMessageIds.length > MAX_PROCESSED_IDS) {
-    // Remove ~20% of oldest IDs when we hit the limit
+  if (processedMessageIds.size > MAX_PROCESSED_IDS) {
     const removeCount = Math.floor(MAX_PROCESSED_IDS * 0.2);
-    processedMessageIds.splice(0, removeCount);
+    const idsArray = Array.from(processedMessageIds);
+    processedMessageIds = new Set(idsArray.slice(removeCount));
   }
 }
 
@@ -168,5 +168,5 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
 // Clear chat message tracking variables
 function resetChatTracking() {
   lastMessageId = null;
-  processedMessageIds.length = 0; // Clear the array
+  processedMessageIds.clear(); // Clear the Set
 }
