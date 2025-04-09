@@ -257,13 +257,14 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     const messageText = messageElement?.textContent || "";
     let messageHTML = null;
 
+
     if (messageElement) {
       // Instead of using innerHTML, create a DocumentFragment
       const messageFragment = document.createDocumentFragment();
 
       // Process and clone each node from the original message
-      for (let i = 0; i < messageElement.childNodes.length; i++) {
-        const node = messageElement.childNodes[i];
+      for (let j = 0; j < messageElement.childNodes.length; j++) {
+        const node = messageElement.childNodes[j];
 
         // Handle different node types
         if (node.nodeType === Node.TEXT_NODE) {
@@ -282,7 +283,7 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
           imgClone.style.objectFit = "contain";
           messageFragment.appendChild(imgClone);
         } else {
-          // For other node types, clone as is
+          // For other node types (like emoji spans), clone them properly
           messageFragment.appendChild(node.cloneNode(true));
         }
       }
