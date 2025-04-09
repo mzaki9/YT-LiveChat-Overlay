@@ -160,14 +160,17 @@
 
 .chat-message-content {
   display: flex;
-  flex-direction: row; /* Change from column to row */
-  align-items: baseline; /* Align text baseline */
-  flex-wrap: wrap; /* Allow wrapping for longer messages */
+  flex-direction: row;
+  align-items: center; 
+  flex-wrap: wrap;
   flex-grow: 1;
+  gap: 4px; 
 }
+
+
 .chat-message-author {
   font-weight: bold;
-  margin-right: 6px; 
+  margin-right: 0;
   margin-bottom: 0;
   white-space: nowrap;
   display: flex;
@@ -175,22 +178,34 @@
   font-size: var(--chat-font-size);
 }
 
+.chat-emoticon {
+  display: inline-block;
+  height: 1em !important;
+  width: auto !important;
+  vertical-align: middle;
+  margin: 0 0.1em;
+}
+
 .chat-message-text {
   word-break: break-word;
   font-size: var(--chat-font-size);
   line-height: 1.4;
-  flex: 1 1 auto; /* Allow text to grow and fill available space */
-  min-width: 0; /* Allow text container to shrink below content size */
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex; /* Change to inline-flex for better alignment */
+  align-items: center; /* Center align with other elements */
 }
 
 
 .chat-badge {
   width: 16px;
   height: 16px;
-  margin-left: 6px; 
+  margin-left: 0; /* Remove margin-left since we're using gap */
   vertical-align: middle;
   border-radius: 3px;
   object-fit: contain;
+  display: inline-flex; /* Make badges inline-flex for better alignment */
+  align-self: center; /* Ensure vertical centering */
 }
 
 .font-size-control input {
