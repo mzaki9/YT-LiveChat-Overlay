@@ -167,12 +167,13 @@
   flex-grow: 1;
   gap: 2px; 
   min-height: calc(var(--chat-font-size) * 2);
+  width: 100%;
 }
 
 
 .chat-message-author {
   font-weight: bold;
-  margin-right: 0;
+  margin-right: 4px;
   margin-bottom: 0;
   white-space: nowrap;
   display: inline-flex; 
@@ -204,10 +205,9 @@
   word-break: break-word;
   font-size: var(--chat-font-size);
   line-height: 1.4;
-  flex: 1 1 auto;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
+  display: inline;
+  overflow-wrap: anywhere;
+  max-width: 100%; 
 }
 
 .font-size-control input {
@@ -389,7 +389,7 @@
 
 
 html[data-avatars-enabled="false"] .chat-message-profile {
-  display: none !important;
+display: none !important;
 }
 
 html[data-avatars-enabled="false"] .chat-message {
