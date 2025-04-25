@@ -392,11 +392,21 @@ function cleanupOverlay() {
   const existingOverlay = document.getElementById("overlay-chat-container");
   const existingToggleButton = document.getElementById("toggle-chat-overlay");
 
+  // Clear the update interval first to stop any processing
+  clearInterval(updateInterval);
+
   if (existingOverlay) {
+    // Extract elements that need special handling for event listeners
     const dragHandle = existingOverlay.querySelector("#drag-handle");
     const resizeHandle = existingOverlay.querySelector("#resize-handle");
     const settingsIcon = existingOverlay.querySelector("#settings-icon");
+    const settingsPanel = existingOverlay.querySelector("#settings-panel");
+    const opacitySlider = settingsPanel?.querySelector("#opacity-slider");
+    const fontSizeInput = settingsPanel?.querySelector("#font-size-input");
+    const avatarToggle = settingsPanel?.querySelector("#avatar-toggle");
+    const colorfulToggle = settingsPanel?.querySelector("#colorful-toggle");
 
+    // Replace elements that have event listeners with clones to ensure all listeners are removed
     if (dragHandle) {
       const clone = dragHandle.cloneNode(true);
       dragHandle.parentNode.replaceChild(clone, dragHandle);
@@ -412,17 +422,48 @@ function cleanupOverlay() {
       settingsIcon.parentNode.replaceChild(clone, settingsIcon);
     }
 
+    if (opacitySlider) {
+      const clone = opacitySlider.cloneNode(true);
+      opacitySlider.parentNode.replaceChild(clone, opacitySlider);
+    }
+    
+    if (fontSizeInput) {
+      const clone = fontSizeInput.cloneNode(true);
+      fontSizeInput.parentNode.replaceChild(clone, fontSizeInput);
+    }
+    
+    if (avatarToggle) {
+      const clone = avatarToggle.cloneNode(true);
+      avatarToggle.parentNode.replaceChild(clone, avatarToggle);
+    }
+    
+    if (colorfulToggle) {
+      const clone = colorfulToggle.cloneNode(true);
+      colorfulToggle.parentNode.replaceChild(clone, colorfulToggle);
+    }
+    
+    // Clear references to any large object like the chat container contents
+    const chatMessagesContainer = existingOverlay.querySelector("#chat-messages-container");
+    if (chatMessagesContainer) {
+      chatMessagesContainer.innerHTML = '';
+    }
+
+    // Remove the entire overlay
     existingOverlay.remove();
   }
 
   if (existingToggleButton) {
+    // Replace with a clone to remove event listeners
     const clone = existingToggleButton.cloneNode(true);
-    existingToggleButton.parentNode.replaceChild(clone, existingToggleButton);
+    if (existingToggleButton.parentNode) {
+      existingToggleButton.parentNode.replaceChild(clone, existingToggleButton);
+    }
     clone.remove();
   }
 
-  clearInterval(updateInterval);
-
   // Clean up message tracking to prevent memory leaks with long streams
   resetChatTracking();
+  
+  // Reset overlay state
+  isOverlayVisible = false;
 }

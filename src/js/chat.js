@@ -17,6 +17,7 @@ const elementPool = {
   authors: [],
   messageTexts: [],
   badges: [],
+  contentContainers: [], // Add content container pool
 
   // Get or create a chat message element
   getMessage: function () {
@@ -57,11 +58,24 @@ const elementPool = {
     }
     return document.createElement("img");
   },
+  
+  // Get or create a content container
+  getContentContainer: function() {
+    if (this.contentContainers.length > 0) {
+      return this.contentContainers.pop();
+    }
+    return document.createElement("div");
+  },
 
   // Return elements to the pool
   recycle: function (element) {
     // Clear the element of any content and event listeners
-    if (!element) return;
+    if (!element) {
+      return;
+    }
+
+    // Remove all event listeners by cloning and replacing
+    const cleanElement = element.cloneNode(false);
 
     // Clear children if it's a container
     while (element.firstChild) {
@@ -69,26 +83,47 @@ const elementPool = {
       element.removeChild(child);
 
       // Determine type of child and recycle it
-      if (child.classList.contains("chat-message-profile")) {
+      if (child.classList?.contains("chat-message-profile")) {
+        // Clear src to prevent memory leaks from image references
+        if (child.tagName === 'IMG') child.src = '';
         this.profileImgs.push(child);
-      } else if (child.classList.contains("chat-message-author")) {
+      } else if (child.classList?.contains("chat-message-content")) {
+        // Recycle the content container directly
+        child.innerHTML = ''; // Clear all children
+        this.contentContainers.push(child);
+      } else if (child.classList?.contains("chat-message-author")) {
+        // Clear any styling
+        child.style = '';
         this.authors.push(child);
-      } else if (child.classList.contains("chat-message-text")) {
+      } else if (child.classList?.contains("chat-message-text")) {
+        // Clear any content
+        child.innerHTML = '';
         this.messageTexts.push(child);
-      } else if (child.classList.contains("chat-badge")) {
+      } else if (child.classList?.contains("chat-badge")) {
+        // Clear src to prevent memory leaks from image references
+        if (child.tagName === 'IMG') child.src = '';
         this.badges.push(child);
       }
     }
 
     // Add the empty parent element back to the pool
-    if (element.classList.contains("chat-message")) {
+    if (cleanElement.classList?.contains("chat-message")) {
       // Remove all styles, classes, and attributes except the class 'chat-message'
-      const classValue = "chat-message";
-      element.setAttribute("class", classValue);
-      element.style = "";
-      this.messages.push(element);
+      cleanElement.setAttribute("class", "chat-message");
+      cleanElement.style = "";
+      this.messages.push(cleanElement);
     }
   },
+  
+  // Clear pools to specified size limit
+  trimPools: function(maxPoolSize = MAX_MESSAGES) {
+    this.messages.length = Math.min(this.messages.length, maxPoolSize);
+    this.profileImgs.length = Math.min(this.profileImgs.length, maxPoolSize);
+    this.authors.length = Math.min(this.authors.length, maxPoolSize);
+    this.messageTexts.length = Math.min(this.messageTexts.length, maxPoolSize);
+    this.badges.length = Math.min(this.badges.length, maxPoolSize);
+    this.contentContainers.length = Math.min(this.contentContainers.length, maxPoolSize);
+  }
 };
 
 // Determine author class based on YouTube's classes
@@ -126,18 +161,12 @@ function createChatMessageElement(
     chatMessageElement.appendChild(profileImg);
   }
 
-  // Check if the message element already has a content container
-  let chatMessageContent = chatMessageElement.querySelector(
-    ".chat-message-content"
-  );
-  if (!chatMessageContent) {
-    chatMessageContent = document.createElement("div");
-    chatMessageContent.className = "chat-message-content";
-    chatMessageElement.appendChild(chatMessageContent);
-  } else {
-    // Clear existing content
-    chatMessageContent.innerHTML = "";
-  }
+  // Use content container from pool
+  const chatMessageContent = elementPool.getContentContainer();
+  chatMessageContent.className = "chat-message-content";
+  // Ensure it's empty
+  chatMessageContent.textContent = '';
+  chatMessageElement.appendChild(chatMessageContent);
 
   const chatMessageAuthor = elementPool.getAuthor();
   chatMessageAuthor.className = `chat-message-author ${authorClass}`;
@@ -171,16 +200,14 @@ function createChatMessageElement(
   // Use fragment instead of innerHTML when available
   if (messageHTML && messageHTML.isDocumentFragment) {
     // Clear existing content first
-    while (messageSpan.firstChild) {
-      messageSpan.removeChild(messageSpan.firstChild);
-    }
+    messageSpan.textContent = '';
     // Append the fragment
     messageSpan.appendChild(messageHTML);
   } else if (typeof messageHTML === "string") {
     // Fall back to innerHTML for backward compatibility
     messageSpan.innerHTML = messageHTML;
   } else {
-    // Use textContent for simple messages with no formatting
+    // Use textContent for simple messages with no formatting (much faster than innerHTML)
     messageSpan.textContent = messageText;
   }
 
@@ -208,125 +235,175 @@ function addProcessedMessageId(messageId) {
 
 function updateChatMessages(liveChatFrame, chatMessagesContainer) {
   // Only process if the overlay is visible
-  if (!isOverlayVisible || !liveChatFrame || !chatMessagesContainer)
+  if (!isOverlayVisible || !liveChatFrame || !chatMessagesContainer) {
     return false;
+  }
 
   const chatDocument = liveChatFrame.contentDocument;
-  if (!chatDocument) return false;
-
-  // Use querySelector instead of querySelectorAll when possible
-  const chatItems = chatDocument.querySelectorAll(
-    "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer"
-  );
-
-  // Instead of creating an array with slice, just process the last items
-  const totalItems = chatItems.length;
-  const startIndex = Math.max(0, totalItems - MAX_NEW_MESSAGES);
-  let newMessages = 0;
-  const fragment = document.createDocumentFragment();
+  if (!chatDocument) {
+    return false;
+  }
 
   // Check if we're near the bottom before adding messages
   const isAtBottom =
     chatMessagesContainer.scrollTop + chatMessagesContainer.clientHeight >=
     chatMessagesContainer.scrollHeight - 50;
 
-  for (let i = totalItems - 1; i >= startIndex; i--) {
+  // Use selector once and then filter to minimize DOM operations
+  const chatItems = chatDocument.querySelectorAll(
+    "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer"
+  );
+
+  // Use document fragment for batch DOM updates
+  const fragment = document.createDocumentFragment();
+  let newMessages = 0;
+  
+  // Process only the most recent messages (more efficient than reverse iteration)
+  const totalItems = chatItems.length;
+  const startIndex = Math.max(0, totalItems - MAX_NEW_MESSAGES);
+  
+  for (let i = startIndex; i < totalItems; i++) {
     const item = chatItems[i];
+    
+    // Skip items without IDs or already processed
     const messageId = item.getAttribute("id");
+    if (!messageId || isMessageProcessed(messageId)) {
+      continue;
+    }
 
-    if (!messageId || isMessageProcessed(messageId)) continue;
-
+    // Mark as processed early to prevent duplicates even if processing fails
     addProcessedMessageId(messageId);
 
-    // Use textContent for basic text
-    const authorName =
-      item.querySelector("#author-name")?.textContent || "Unknown";
-    const authorPhoto = item.querySelector("#img")?.src || "";
+    try {
+      // Cache common DOM queries
+      const authorNameElement = item.querySelector("#author-name");
+      const authorName = authorNameElement ? authorNameElement.textContent : "Unknown";
+      const authorClass = authorNameElement ? getChatMessageAuthorClass(item) : "";
+      
+      // Use optional chaining for potentially missing elements
+      const authorPhoto = item.querySelector("#img")?.src || "";
 
-    // Simplified badge detection
-    let badgeUrl = null;
-    const badgeImg = item.querySelector(
-      "yt-live-chat-author-badge-renderer img"
-    );
-    if (badgeImg && badgeImg.src) {
-      badgeUrl = badgeImg.src;
-    }
+      // Simplified badge detection - use optional chaining
+      const badgeImg = item.querySelector(
+        "yt-live-chat-author-badge-renderer img"
+      );
+      const badgeUrl = badgeImg?.src || null;
 
-    // Get both text and HTML content for the message
-    const messageElement = item.querySelector("#message");
-    const messageText = messageElement?.textContent || "";
-    let messageHTML = null;
-
-
-    if (messageElement) {
-      // Instead of using innerHTML, create a DocumentFragment
-      const messageFragment = document.createDocumentFragment();
-
-      // Process and clone each node from the original message
-      for (let j = 0; j < messageElement.childNodes.length; j++) {
-        const node = messageElement.childNodes[j];
-
-        // Handle different node types
-        if (node.nodeType === Node.TEXT_NODE) {
-          // For text nodes, just clone them
-          messageFragment.appendChild(node.cloneNode(true));
-        } else if (
-          node.nodeType === Node.ELEMENT_NODE &&
-          node.tagName === "IMG"
-        ) {
-          // For image nodes (emoticons), apply our styling
-          const imgClone = node.cloneNode(true);
-          imgClone.classList.add("chat-emoticon");
-          imgClone.style.height = "1em";
-          imgClone.style.width = "auto";
-          imgClone.style.verticalAlign = "middle";
-          imgClone.style.objectFit = "contain";
-          messageFragment.appendChild(imgClone);
-        } else {
-          // For other node types (like emoji spans), clone them properly
-          messageFragment.appendChild(node.cloneNode(true));
-        }
+      // Get message content with null safety
+      const messageElement = item.querySelector("#message");
+      const messageText = messageElement?.textContent || "";
+      
+      // Create message HTML only if we have actual content
+      let messageHTML = null;
+      if (messageElement && messageElement.childNodes.length > 0) {
+        messageHTML = createMessageFragment(messageElement);
       }
 
-      // Keep reference to the fragment for the message element
-      messageFragment.isDocumentFragment = true;
-      messageHTML = messageFragment;
+      // Create the chat message element and add to fragment
+      const chatMessageElement = createChatMessageElement(
+        authorName,
+        authorPhoto,
+        badgeUrl,
+        messageText,
+        authorClass,
+        messageHTML
+      );
+
+      fragment.appendChild(chatMessageElement);
+      newMessages++;
+    } catch (error) {
+      // Silently catch errors to prevent breaking the chat functionality
+      console.error("Error processing chat message:", error);
     }
-
-    const authorClass = getChatMessageAuthorClass(item);
-
-    const chatMessageElement = createChatMessageElement(
-      authorName,
-      authorPhoto,
-      badgeUrl,
-      messageText,
-      authorClass,
-      messageHTML
-    );
-
-    fragment.appendChild(chatMessageElement);
-    newMessages++;
   }
 
   // Only manipulate DOM if we have new messages
-  if (newMessages === 0) return false;
+  if (newMessages === 0) {
+    return false;
+  }
 
   // Add all messages at once
   chatMessagesContainer.appendChild(fragment);
 
-  // Remove old messages more efficiently and recycle them
-  while (chatMessagesContainer.childElementCount > MAX_MESSAGES) {
-    const oldElement = chatMessagesContainer.firstChild;
-    chatMessagesContainer.removeChild(oldElement);
-    elementPool.recycle(oldElement);
+  // Remove old messages more efficiently
+  const childrenCount = chatMessagesContainer.childElementCount;
+  if (childrenCount > MAX_MESSAGES) {
+    const elementsToRemove = childrenCount - MAX_MESSAGES;
+    // Bulk remove oldest messages and recycle them
+    for (let i = 0; i < elementsToRemove; i++) {
+      const oldElement = chatMessagesContainer.firstChild;
+      if (oldElement) {
+        chatMessagesContainer.removeChild(oldElement);
+        elementPool.recycle(oldElement);
+      }
+    }
   }
 
   // Auto-scroll only if we were already at the bottom
   if (isAtBottom) {
-    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    // Use requestAnimationFrame for smoother scrolling
+    requestAnimationFrame(() => {
+      chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    });
   }
 
   return true;
+}
+
+// Helper function to create a document fragment from a message element
+function createMessageFragment(messageElement) {
+  // Create a new document fragment
+  const messageFragment = document.createDocumentFragment();
+
+  // Optimize by checking length once
+  const nodeCount = messageElement.childNodes.length;
+  
+  // Process and clone each node from the original message
+  for (let j = 0; j < nodeCount; j++) {
+    const node = messageElement.childNodes[j];
+
+    try {
+      // Handle different node types
+      switch (node.nodeType) {
+        case Node.TEXT_NODE:
+          // For text nodes, just clone them
+          messageFragment.appendChild(node.cloneNode(true));
+          break;
+        
+        case Node.ELEMENT_NODE:
+          if (node.tagName === "IMG") {
+            // For image nodes (emoticons), apply our styling
+            const imgClone = node.cloneNode(false); // shallow clone for performance
+            imgClone.classList.add("chat-emoticon");
+            
+            // Apply all styles at once for better performance
+            Object.assign(imgClone.style, {
+              height: "1em",
+              width: "auto",
+              verticalAlign: "middle",
+              objectFit: "contain"
+            });
+            
+            messageFragment.appendChild(imgClone);
+          } else {
+            // For other element nodes, clone them
+            messageFragment.appendChild(node.cloneNode(true));
+          }
+          break;
+          
+        default:
+          // Skip other node types
+          break;
+      }
+    } catch (error) {
+      // Catch errors for individual nodes without breaking the entire process
+      console.error("Error processing message node:", error);
+    }
+  }
+
+  // Keep reference to the fragment for the message element
+  messageFragment.isDocumentFragment = true;
+  return messageFragment;
 }
 
 // Clear chat message tracking variables
@@ -334,20 +411,15 @@ function resetChatTracking() {
   lastMessageId = null;
   processedMessageIds.clear(); // Clear the Set
 
-  // Clear the element pools if we have too many cached elements
-  if (elementPool.messages.length > MAX_MESSAGES * 2) {
-    elementPool.messages.length = MAX_MESSAGES;
-  }
-  if (elementPool.profileImgs.length > MAX_MESSAGES * 2) {
-    elementPool.profileImgs.length = MAX_MESSAGES;
-  }
-  if (elementPool.authors.length > MAX_MESSAGES * 2) {
-    elementPool.authors.length = MAX_MESSAGES;
-  }
-  if (elementPool.messageTexts.length > MAX_MESSAGES * 2) {
-    elementPool.messageTexts.length = MAX_MESSAGES;
-  }
-  if (elementPool.badges.length > MAX_MESSAGES * 2) {
-    elementPool.badges.length = MAX_MESSAGES;
+  // Trim element pools to prevent excessive memory usage
+  elementPool.trimPools(MAX_MESSAGES);
+  
+  // Force garbage collection of any removed elements not in pool
+  if (window.gc) {
+    try {
+      window.gc();
+    } catch (e) {
+      // GC not available, that's fine
+    }
   }
 }

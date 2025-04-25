@@ -4,16 +4,25 @@
 
 // Main variables
 let videoPlayer, liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton;
+let keyboardShortcutListener, fullscreenChangeListener;
+let injectionInterval, urlObserver;
 
-
-// Handle fullscreen changes
+// Handle fullscreen changes and button visibility
 function handleFullscreenChange() {
   if (!videoPlayer || !overlayChatContainer || !toggleButton) {
-    // log("Elements not ready during fullscreen change");
+    log("Elements not ready during fullscreen change");
     return;
   }
 
-  if (document.fullscreenElement) {
+  // Always show the button on livestream pages, whether in fullscreen or not
+  const isLivestream = liveChatFrame && 
+    (document.title.includes('(live)') || 
+     document.title.toLowerCase().includes('stream') || 
+     document.querySelector('[badge-label="LIVE"]') ||
+     document.querySelector('.ytp-liv-badge'));
+
+  // Show button in fullscreen OR if it's a livestream
+  if (document.fullscreenElement || isLivestream) {
     toggleButton.style.display = "block";
     toggleButton.classList.add("show");
 
@@ -39,21 +48,56 @@ function handleFullscreenChange() {
   }
 }
 
+// Clean up all event listeners and intervals to prevent memory leaks
+function cleanupAllListeners() {
+  // Clear intervals
+  clearInterval(updateInterval);
+  clearInterval(injectionInterval);
+  
+  // Remove document event listeners
+  if (keyboardShortcutListener) {
+    document.removeEventListener('keydown', keyboardShortcutListener);
+    keyboardShortcutListener = null;
+  }
+  
+  if (fullscreenChangeListener) {
+    document.removeEventListener('fullscreenchange', fullscreenChangeListener);
+    fullscreenChangeListener = null;
+  }
+  
+  // Disconnect observer
+  if (urlObserver) {
+    urlObserver.disconnect();
+    urlObserver = null;
+  }
+  
+  // Clean up overlay
+  cleanupOverlay();
+}
+
 // Main function to initialize the extension
 function injectLiveChatOverlay() {
-  // Find required elements
-  videoPlayer = document.querySelector(".html5-video-player");
+  // Clean up previous instance first
+  cleanupAllListeners();
+  
+  // Find required elements with more robust selectors
+  videoPlayer = document.querySelector(".html5-video-player") || 
+                document.querySelector(".ytp-embed") || 
+                document.querySelector("ytd-player") ||
+                document.querySelector("#movie_player") ||
+                document.querySelector(".ytd-player");
   
   // Use the findChatFrame utility function
   liveChatFrame = findChatFrame();
+
+  // Log what we found for easier debugging
+  log("Video player found: " + (videoPlayer ? "Yes" : "No"));
+  log("Live chat frame found: " + (liveChatFrame ? "Yes" : "No"));
 
   if (!videoPlayer || !liveChatFrame) {
     // log("Required elements not found, will retry later");
     return false; // Return false to indicate the injection failed
   }
-
-  // Clean up existing overlay
-  cleanupOverlay();
 
   // Create the chat overlay
   const overlay = createChatOverlay(videoPlayer);
@@ -66,14 +110,16 @@ function injectLiveChatOverlay() {
   });
   
   // Add keyboard shortcut
-  document.addEventListener('keydown', (e) => {
+  keyboardShortcutListener = (e) => {
     if (e.altKey && e.key.toLowerCase() === 'c' && document.fullscreenElement) {
       toggleOverlayChat(liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton);
     }
-  });
+  };
+  document.addEventListener('keydown', keyboardShortcutListener);
 
   // Listen for fullscreen changes
-  document.addEventListener("fullscreenchange", handleFullscreenChange, { passive: true });
+  fullscreenChangeListener = handleFullscreenChange;
+  document.addEventListener("fullscreenchange", fullscreenChangeListener, { passive: true });
 
   // Initialize overlay state
   initializeOverlayState(overlayChatContainer, liveChatFrame, chatMessagesContainer);
@@ -81,58 +127,124 @@ function injectLiveChatOverlay() {
   return true; // Return true to indicate success
 }
 
+// Set up MutationObserver for URL changes - using a named function for easier cleanup
+function setupUrlObserver() {
+  const urlObserverCallback = debounce((mutations) => {
+    // Check if URL has changed (for YouTube SPA navigation)
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      
+      // YouTube SPA navigation - check if we're on a livestream
+      if (location.href.includes('/watch') && 
+         (location.href.includes('&ab_channel=') || document.title.includes('(live)') || document.title.toLowerCase().includes('stream'))) {
+        
+        // Try immediately first
+        attemptChatDetection();
+        
+        // Then set up multiple delayed attempts for dynamically loaded content
+        setTimeout(attemptChatDetection, 1000);
+        setTimeout(attemptChatDetection, 2500);
+        setTimeout(attemptChatDetection, 5000);
+      }
+    } else {
+      // Even if URL hasn't changed, check for dynamically loaded chat
+      if ((mutations || []).some(mutation => 
+          mutation.addedNodes && 
+          mutation.addedNodes.length && 
+          Array.from(mutation.addedNodes).some(node => 
+            node.id === 'chat' || 
+            (node.querySelector && (
+              node.querySelector('iframe[src*="live_chat"]') ||
+              node.querySelector('ytd-live-chat-frame')
+            ))
+          )
+      )) {
+        attemptChatDetection();
+      }
+    }
+  }, 250);
+
+  // Create a new observer
+  urlObserver = new MutationObserver(urlObserverCallback);
+  
+  // Start observing with necessary parameters
+  let lastUrl = location.href;
+  urlObserver.observe(document.body, { 
+    childList: true, 
+    subtree: true 
+  });
+}
+
+// Function to attempt chat detection and injection
+function attemptChatDetection() {
+  liveChatFrame = findChatFrame();
+  if (liveChatFrame) {
+    log("Chat frame found, attempting to inject overlay");
+    injectLiveChatOverlay();
+  } else {
+    log("No chat frame found during detection attempt");
+  }
+}
+
 // Run the injection function when the page is loaded
 if (document.readyState === "complete") {
   const success = injectLiveChatOverlay();
   if (!success) {
-    // Set up a retry mechanism
-    const injectionInterval = setInterval(() => {
+    // Set up a retry mechanism with more frequent attempts
+    log("Initial injection failed, setting up retry mechanism");
+    injectionInterval = setInterval(() => {
       liveChatFrame = findChatFrame();
       if (liveChatFrame) {
         const success = injectLiveChatOverlay();
         if (success) {
           clearInterval(injectionInterval);
-          // log("Successfully injected after retry");
+          log("Successfully injected after retry");
         }
       }
-    }, 2000); // Check every 2 seconds
+    }, 1000); // Check every second
+    
+    // Cleanup interval after 30 seconds if nothing found to prevent endless checking
+    setTimeout(() => {
+      if (injectionInterval) {
+        clearInterval(injectionInterval);
+        log("Chat detection timed out - no livestream chat found");
+      }
+    }, 30000);
   }
 } else {
   window.addEventListener("load", () => {
     const success = injectLiveChatOverlay();
     if (!success) {
-      // Retry after load
-      const injectionInterval = setInterval(() => {
+      // Retry after load with multiple delayed attempts for dynamic content
+      log("Initial injection after load failed, setting up retry");
+      setTimeout(attemptChatDetection, 1000);
+      setTimeout(attemptChatDetection, 2500);
+      setTimeout(attemptChatDetection, 5000);
+      
+      injectionInterval = setInterval(() => {
         liveChatFrame = findChatFrame();
         if (liveChatFrame) {
           const success = injectLiveChatOverlay();
           if (success) {
             clearInterval(injectionInterval);
-            // log("Successfully injected after load and retry");
+            log("Successfully injected after load and retry");
           }
         }
-      }, 2000);
+      }, 1000);
+      
+      // Cleanup interval after 30 seconds
+      setTimeout(() => {
+        if (injectionInterval) {
+          clearInterval(injectionInterval);
+          log("Chat detection timed out after page load - no livestream chat found");
+        }
+      }, 30000);
     }
   });
 }
 
-const urlObserver = new MutationObserver(debounce((mutations) => {
-  // Check if URL has changed (for YouTube SPA navigation)
-  if (location.href !== lastUrl) {
-    lastUrl = location.href;
-    // Allow some time for YouTube to load the new page
-    setTimeout(() => {
-      liveChatFrame = findChatFrame();
-      if (liveChatFrame) {
-        injectLiveChatOverlay();
-      }
-    }, 1500);
-  }
-}, 250))
+// Set up observer for URL changes
+setupUrlObserver();
 
-// Start observing with necessary parameters
-let lastUrl = location.href;
-urlObserver.observe(document.body, { 
-  childList: true, 
-  subtree: true 
-});
+// Clean up on extension unload
+window.addEventListener('unload', cleanupAllListeners);

@@ -21,11 +21,22 @@ function debounce(func, wait) {
   }
 
   function findChatFrame() {
-    return document.querySelector("#chat-frame") ||
-      document.querySelector("iframe#chatframe") || 
-      document.querySelector("iframe[src*='live_chat']") ||
-      document.querySelector("iframe[src*='www.youtube.com/live_chat']");
-  }
+  // Search for chat frame with various selectors
+  const chatFrame = document.querySelector("#chat-frame") ||
+    document.querySelector("iframe#chatframe") || 
+    document.querySelector("iframe[src*='live_chat']") ||
+    document.querySelector("iframe[src*='www.youtube.com/live_chat']") ||
+    // Additional selectors for newer YouTube structure
+    document.querySelector("iframe#chat") ||
+    document.querySelector("ytd-live-chat-frame iframe") ||
+    document.querySelector("ytd-watch-flexy ytd-live-chat-frame iframe") ||
+    document.querySelector("ytd-watch-flexy #chat iframe") ||
+    // Broader fallback selectors
+    document.querySelector("iframe[src*='chat']") ||
+    document.querySelector("iframe[src*='comments']");
+  
+  return chatFrame;
+}
 
   function getColorFromName(name) {
     let hash = 0;
