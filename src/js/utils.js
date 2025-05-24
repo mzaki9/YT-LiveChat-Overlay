@@ -31,6 +31,9 @@ function debounce(func, wait) {
     document.querySelector("ytd-live-chat-frame iframe") ||
     document.querySelector("ytd-watch-flexy ytd-live-chat-frame iframe") ||
     document.querySelector("ytd-watch-flexy #chat iframe") ||
+    // More specific selectors based on potential new UIs
+    document.querySelector("iframe[id='chatframe'][src*='live_chat']") ||
+    document.querySelector("ytd-live-chat-frame > iframe#chat") ||
     // Broader fallback selectors
     document.querySelector("iframe[src*='chat']") ||
     document.querySelector("iframe[src*='comments']");
