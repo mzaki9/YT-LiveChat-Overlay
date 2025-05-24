@@ -131,7 +131,7 @@ function getChatMessageAuthorClass(item) {
   const authorNameElement = item.querySelector("#author-name");
   if (authorNameElement.classList.contains("member")) {
     return "author-member";
-  } else if (authorNameElement.classList.contains("moderator")) {
+  }if (authorNameElement.classList.contains("moderator")) {
     return "author-moderator";
   }
   return "";
@@ -198,7 +198,7 @@ function createChatMessageElement(
   messageSpan.className = "chat-message-text";
 
   // Use fragment instead of innerHTML when available
-  if (messageHTML && messageHTML.isDocumentFragment) {
+  if (messageHTML?.isDocumentFragment) {
     // Clear existing content first
     messageSpan.textContent = '';
     // Append the fragment

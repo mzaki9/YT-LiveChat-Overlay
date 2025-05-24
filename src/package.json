@@ -1,6 +1,6 @@
 {
   "name": "youtube-live-chat-overlay",
-  "version": "1.3.4",
+  "version": "1.3.5.1",
   "description": "Adds a live chat overlay to YouTube videos in fullscreen mode",
   "scripts": {
     "build": "web-ext build --overwrite-dest",
@@ -14,6 +14,6 @@
   "author": "Muhammad Zaki",
   "license": "GPL-3.0",
   "devDependencies": {
-    "web-ext": "^7.2.0"
+    "web-ext": "^8.7.0"
   }
 }

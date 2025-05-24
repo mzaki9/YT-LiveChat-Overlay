@@ -3,9 +3,15 @@
  */
 
 // Main variables
-let videoPlayer, liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton;
-let keyboardShortcutListener, fullscreenChangeListener;
-let injectionInterval, urlObserver;
+let videoPlayer;
+let liveChatFrame;
+let overlayChatContainer;
+let chatMessagesContainer;
+let toggleButton;
+let keyboardShortcutListener;
+let fullscreenChangeListener;
+let injectionInterval;
+let urlObserver;
 
 // Handle fullscreen changes and button visibility
 function handleFullscreenChange() {
@@ -91,8 +97,8 @@ function injectLiveChatOverlay() {
   liveChatFrame = findChatFrame();
 
   // Log what we found for easier debugging
-  log("Video player found: " + (videoPlayer ? "Yes" : "No"));
-  log("Live chat frame found: " + (liveChatFrame ? "Yes" : "No"));
+  log(`Video player found: ${videoPlayer ? "Yes" : "No"}`);
+  log(`Live chat frame found: ${liveChatFrame ? "Yes" : "No"}`);
 
   if (!videoPlayer || !liveChatFrame) {
     // log("Required elements not found, will retry later");
@@ -149,8 +155,7 @@ function setupUrlObserver() {
     } else {
       // Even if URL hasn't changed, check for dynamically loaded chat
       if ((mutations || []).some(mutation => 
-          mutation.addedNodes && 
-          mutation.addedNodes.length && 
+          mutation.addedNodes?.length && 
           Array.from(mutation.addedNodes).some(node => 
             node.id === 'chat' || 
             (node.querySelector && (
