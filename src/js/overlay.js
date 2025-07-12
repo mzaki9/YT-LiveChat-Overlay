@@ -343,26 +343,7 @@ function initializeOverlayState(
   liveChatFrame,
   chatMessagesContainer
 ) {
-  const savedState = localStorage.getItem("youtubeOverlayVisible");
-
-  if (savedState === "true" && document.fullscreenElement) {
-    isOverlayVisible = true;
-    overlayChatContainer.style.display = "block";
-    overlayChatContainer.classList.add("show");
-
-    // Create a debounced update function
-    const debouncedUpdate = debounce(() => {
-      updateChatMessages(liveChatFrame, chatMessagesContainer);
-    }, 500);
-
-    // Update immediately
-    debouncedUpdate();
-
-    // Setup interval
-    clearInterval(updateInterval);
-    updateInterval = setInterval(debouncedUpdate, 800);
-  }
-
+  // Apply saved opacity
   const savedOpacity = localStorage.getItem("chatOverlayOpacity") || 50;
   overlayChatContainer.style.backgroundColor = `rgba(0, 0, 0, ${
     savedOpacity / 100
@@ -385,6 +366,10 @@ function initializeOverlayState(
 
   // Reset chat tracking
   resetChatTracking();
+  
+  // The overlay visibility and update intervals are now handled by handleFullscreenChange
+  // This avoids conflicts and duplication
+  log("Overlay state initialized with saved preferences");
 }
 
 // Improve memory management when cleaning up the overlay

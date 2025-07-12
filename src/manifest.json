@@ -15,6 +15,7 @@
       "matches": ["*://*.youtube.com/*"],
       "js": [
         "js/utils.js",
+        "js/performance.js",
         "js/ui.js",
         "js/chat.js",
         "js/overlay.js",

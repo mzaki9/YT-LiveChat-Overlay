@@ -38,12 +38,31 @@ function handleFullscreenChange() {
       overlayChatContainer.style.display = "block";
       overlayChatContainer.classList.add("show");
       
-      // Update immediately and set interval
-      updateChatMessages(liveChatFrame, chatMessagesContainer);
-      clearInterval(updateInterval);
-      updateInterval = setInterval(() => {
+      // Start with adaptive interval for better performance
+      if (typeof measureUpdatePerformance === 'function' && typeof getAdaptiveInterval === 'function') {
+        const monitoredUpdateFunction = measureUpdatePerformance(updateChatMessages);
+        monitoredUpdateFunction(liveChatFrame, chatMessagesContainer);
+        clearInterval(updateInterval);
+        updateInterval = setInterval(() => {
+          monitoredUpdateFunction(liveChatFrame, chatMessagesContainer);
+          
+          // Adapt interval based on performance every 10 updates
+          if (Math.random() < 0.1) { // 10% chance to check and adapt
+            clearInterval(updateInterval);
+            updateInterval = setInterval(() => {
+              monitoredUpdateFunction(liveChatFrame, chatMessagesContainer);
+            }, getAdaptiveInterval());
+          }
+        }, getAdaptiveInterval());
+      } else {
+        // Fallback to basic monitoring if performance module isn't loaded
+        log("Performance monitoring not available, using basic update interval");
         updateChatMessages(liveChatFrame, chatMessagesContainer);
-      }, 800);
+        clearInterval(updateInterval);
+        updateInterval = setInterval(() => {
+          updateChatMessages(liveChatFrame, chatMessagesContainer);
+        }, 600);
+      }
     }
   } else {
     toggleButton.style.display = "none";
@@ -101,36 +120,53 @@ function injectLiveChatOverlay() {
   log(`Live chat frame found: ${liveChatFrame ? "Yes" : "No"}`);
 
   if (!videoPlayer || !liveChatFrame) {
-    // log("Required elements not found, will retry later");
+    log(`Required elements not found - Video: ${videoPlayer ? "✓" : "✗"}, Chat: ${liveChatFrame ? "✓" : "✗"}`);
     return false; // Return false to indicate the injection failed
   }
 
-  // Create the chat overlay
-  const overlay = createChatOverlay(videoPlayer);
-  overlayChatContainer = overlay.container;
-  chatMessagesContainer = overlay.messagesContainer;
+  try {
+    // Create the chat overlay
+    log("Creating chat overlay...");
+    const overlay = createChatOverlay(videoPlayer);
+    overlayChatContainer = overlay.container;
+    chatMessagesContainer = overlay.messagesContainer;
+    log("Chat overlay created successfully");
 
-  // Create toggle button
-  toggleButton = createToggleButton(videoPlayer, () => {
-    toggleOverlayChat(liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton);
-  });
-  
-  // Add keyboard shortcut
-  keyboardShortcutListener = (e) => {
-    if (e.altKey && e.key.toLowerCase() === 'c' && document.fullscreenElement) {
+    // Create toggle button
+    log("Creating toggle button...");
+    toggleButton = createToggleButton(videoPlayer, () => {
       toggleOverlayChat(liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton);
-    }
-  };
-  document.addEventListener('keydown', keyboardShortcutListener);
+    });
+    log("Toggle button created successfully");
+    
+    // Add keyboard shortcut
+    keyboardShortcutListener = (e) => {
+      if (e.altKey && e.key.toLowerCase() === 'c' && document.fullscreenElement) {
+        toggleOverlayChat(liveChatFrame, overlayChatContainer, chatMessagesContainer, toggleButton);
+      }
+    };
+    document.addEventListener('keydown', keyboardShortcutListener);
 
-  // Listen for fullscreen changes
-  fullscreenChangeListener = handleFullscreenChange;
-  document.addEventListener("fullscreenchange", fullscreenChangeListener, { passive: true });
+    // Listen for fullscreen changes
+    fullscreenChangeListener = handleFullscreenChange;
+    document.addEventListener("fullscreenchange", fullscreenChangeListener, { passive: true });
 
-  // Initialize overlay state
-  initializeOverlayState(overlayChatContainer, liveChatFrame, chatMessagesContainer);
-  
-  return true; // Return true to indicate success
+    // Initialize overlay state
+    log("Initializing overlay state...");
+    initializeOverlayState(overlayChatContainer, liveChatFrame, chatMessagesContainer);
+    log("Overlay state initialized successfully");
+    
+    // Trigger initial fullscreen check to set up visibility and intervals properly
+    log("Triggering initial fullscreen state check...");
+    handleFullscreenChange();
+    
+    log("Chat overlay injection completed successfully!");
+    return true; // Return true to indicate success
+  } catch (error) {
+    log(`Error during injection: ${error.message}`);
+    console.error("Full injection error:", error);
+    return false;
+  }
 }
 
 // Set up MutationObserver for URL changes - using a named function for easier cleanup
@@ -148,35 +184,40 @@ function setupUrlObserver() {
         attemptChatDetection();
         
         // Then set up multiple delayed attempts for dynamically loaded content
-        setTimeout(attemptChatDetection, 1000);
-        setTimeout(attemptChatDetection, 2500);
-        setTimeout(attemptChatDetection, 5000);
+        setTimeout(() => attemptChatDetection(), 1000);
+        setTimeout(() => attemptChatDetection(), 2500);
+        setTimeout(() => attemptChatDetection(), 5000);
       }
     } else {
-      // Even if URL hasn't changed, check for dynamically loaded chat
-      if ((mutations || []).some(mutation => 
-          mutation.addedNodes?.length && 
-          Array.from(mutation.addedNodes).some(node => 
-            node.id === 'chat' || 
-            (node.querySelector && (
-              node.querySelector('iframe[src*="live_chat"]') ||
-              node.querySelector('ytd-live-chat-frame')
-            ))
-          )
-      )) {
+      // More efficient mutation checking - only process if we find relevant changes
+      const hasRelevantChanges = mutations && mutations.some(mutation => {
+        if (!mutation.addedNodes?.length) return false;
+        
+        return Array.from(mutation.addedNodes).some(node => {
+          // Only check element nodes
+          if (node.nodeType !== Node.ELEMENT_NODE) return false;
+          
+          return node.id === 'chat' || 
+                 node.matches?.('iframe[src*="live_chat"], ytd-live-chat-frame') ||
+                 node.querySelector?.('iframe[src*="live_chat"], ytd-live-chat-frame');
+        });
+      });
+      
+      if (hasRelevantChanges) {
         attemptChatDetection();
       }
     }
-  }, 250);
+  }, 200); // Reduced debounce time for more responsiveness
 
   // Create a new observer
   urlObserver = new MutationObserver(urlObserverCallback);
   
-  // Start observing with necessary parameters
+  // Start observing with more targeted options
   let lastUrl = location.href;
   urlObserver.observe(document.body, { 
     childList: true, 
-    subtree: true 
+    subtree: true,
+    attributeFilter: ['id', 'src'] // Only watch for relevant attribute changes
   });
 }
 
@@ -185,9 +226,22 @@ function attemptChatDetection() {
   liveChatFrame = findChatFrame();
   if (liveChatFrame) {
     log("Chat frame found, attempting to inject overlay");
-    injectLiveChatOverlay();
+    const success = injectLiveChatOverlay();
+    if (success) {
+      log("Successfully injected overlay after chat detection");
+      // Clear any running intervals since we succeeded
+      if (injectionInterval) {
+        clearInterval(injectionInterval);
+        injectionInterval = null;
+      }
+      return true;
+    } else {
+      log("Injection failed during chat detection attempt");
+      return false;
+    }
   } else {
     log("No chat frame found during detection attempt");
+    return false;
   }
 }
 
@@ -198,22 +252,19 @@ if (document.readyState === "complete") {
     // Set up a retry mechanism with more frequent attempts
     log("Initial injection failed, setting up retry mechanism");
     injectionInterval = setInterval(() => {
-      liveChatFrame = findChatFrame();
-      if (liveChatFrame) {
-        const success = injectLiveChatOverlay();
-        if (success) {
-          clearInterval(injectionInterval);
-          log("Successfully injected after retry");
-        }
+      const success = attemptChatDetection();
+      if (success) {
+        log("Successfully injected after retry");
+        // attemptChatDetection already clears the interval
       }
     }, 1000); // Check every second
     
     // Cleanup interval after 30 seconds if nothing found to prevent endless checking
-    setTimeout(() => {
-      if (injectionInterval) {
-        clearInterval(injectionInterval);
-        log("Chat detection timed out - no livestream chat found");
-      }
+    setTimeout(() => {        if (injectionInterval) {
+          clearInterval(injectionInterval);
+          injectionInterval = null;
+          log("Chat detection timed out - no livestream chat found");
+        }
     }, 30000);
   }
 } else {
@@ -222,18 +273,15 @@ if (document.readyState === "complete") {
     if (!success) {
       // Retry after load with multiple delayed attempts for dynamic content
       log("Initial injection after load failed, setting up retry");
-      setTimeout(attemptChatDetection, 1000);
-      setTimeout(attemptChatDetection, 2500);
-      setTimeout(attemptChatDetection, 5000);
+      setTimeout(() => attemptChatDetection(), 1000);
+      setTimeout(() => attemptChatDetection(), 2500);
+      setTimeout(() => attemptChatDetection(), 5000);
       
       injectionInterval = setInterval(() => {
-        liveChatFrame = findChatFrame();
-        if (liveChatFrame) {
-          const success = injectLiveChatOverlay();
-          if (success) {
-            clearInterval(injectionInterval);
-            log("Successfully injected after load and retry");
-          }
+        const success = attemptChatDetection();
+        if (success) {
+          log("Successfully injected after load and retry");
+          // attemptChatDetection already clears the interval
         }
       }, 1000);
       

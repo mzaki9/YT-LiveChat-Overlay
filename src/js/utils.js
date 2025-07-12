@@ -5,13 +5,27 @@
 // Debounce function to limit the rate of function execution
 function debounce(func, wait) {
     let timeout;
+    let lastCallTime = 0;
+    
     return function executedFunction(...args) {
+      const now = Date.now();
+      const timeSinceLastCall = now - lastCallTime;
+      
+      // If enough time has passed, execute immediately
+      if (timeSinceLastCall >= wait) {
+        lastCallTime = now;
+        return func.apply(this, args);
+      }
+      
+      // Otherwise, schedule for later
       const later = () => {
-        clearTimeout(timeout);
-        func(...args);
+        lastCallTime = Date.now();
+        timeout = null;
+        func.apply(this, args);
       };
+      
       clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
+      timeout = setTimeout(later, wait - timeSinceLastCall);
     };
   }
   

@@ -149,15 +149,15 @@ function createChatMessageElement(
   const chatMessageElement = elementPool.getMessage();
   chatMessageElement.className = "chat-message";
 
-  // Create fewer DOM elements
+  // Cache settings once for batch processing
   const avatarsEnabled = localStorage.getItem("chatAvatarsEnabled") !== "false";
+  const colorfulEnabled = localStorage.getItem("chatColorfulEnabled") !== "false";
 
   if (avatarsEnabled) {
     const profileImg = elementPool.getProfileImg();
     profileImg.className = "chat-message-profile";
-    profileImg.src =
-      authorPhoto ||
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
+    // Use data URI for missing avatars to avoid network requests
+    profileImg.src = authorPhoto || "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzk5OSIgZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgM2MxLjY2IDAgMyAxLjM0IDMgM3MtMS4zNCAzLTMgMy0zLTEuMzQtMy0zIDEuMzQtMyAzLTN6bTAgMTQuMmMtMi41IDAtNC43MS0xLjI4LTYtMy4yMi4wMy0xLjk5IDQtMy4wOCA2LTMuMDggMS45OSAwIDUuOTcgMS4wOSA2IDMuMDgtMS4yOSAxLjk0LTMuNSAzLjIyLTYgMy4yMnoiLz48L3N2Zz4=";
     chatMessageElement.appendChild(profileImg);
   }
 
@@ -244,28 +244,39 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     return false;
   }
 
-  // Check if we're near the bottom before adding messages
-  const isAtBottom =
-    chatMessagesContainer.scrollTop + chatMessagesContainer.clientHeight >=
-    chatMessagesContainer.scrollHeight - 50;
+  // Cache scroll measurements once
+  const scrollTop = chatMessagesContainer.scrollTop;
+  const clientHeight = chatMessagesContainer.clientHeight;
+  const scrollHeight = chatMessagesContainer.scrollHeight;
+  const isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
 
-  // Use selector once and then filter to minimize DOM operations
+  // Use more specific selector with single query
   const chatItems = chatDocument.querySelectorAll(
-    "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer"
+    "yt-live-chat-text-message-renderer:not([processed]), yt-live-chat-paid-message-renderer:not([processed])"
   );
 
   // Use document fragment for batch DOM updates
   const fragment = document.createDocumentFragment();
   let newMessages = 0;
   
-  // Process only the most recent messages (more efficient than reverse iteration)
+  // Process only visible + buffer zone items for better performance
+  const containerHeight = chatMessagesContainer.clientHeight;
+  const avgMessageHeight = 40; // Approximate message height
+  const visibleCount = Math.ceil(containerHeight / avgMessageHeight);
+  const bufferSize = Math.min(20, visibleCount); // Buffer for smooth scrolling
+  
+  // Process only the most recent messages that could be visible
   const totalItems = chatItems.length;
-  const startIndex = Math.max(0, totalItems - MAX_NEW_MESSAGES);
+  const maxProcessItems = Math.min(MAX_NEW_MESSAGES, visibleCount + bufferSize);
+  const startIndex = Math.max(0, totalItems - maxProcessItems);
   
   for (let i = startIndex; i < totalItems; i++) {
     const item = chatItems[i];
     
-    // Skip items without IDs or already processed
+    // Mark as processed in DOM to avoid reprocessing
+    item.setAttribute('processed', 'true');
+    
+    // Skip items without IDs or already processed in memory
     const messageId = item.getAttribute("id");
     if (!messageId || isMessageProcessed(messageId)) {
       continue;
@@ -275,9 +286,21 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     addProcessedMessageId(messageId);
 
     try {
+      // Early filtering - skip if no meaningful content
+      const messageElement = item.querySelector("#message");
+      if (!messageElement || !messageElement.textContent.trim()) {
+        continue;
+      }
+      
       // Cache common DOM queries
       const authorNameElement = item.querySelector("#author-name");
-      const authorName = authorNameElement ? authorNameElement.textContent : "Unknown";
+      const authorName = authorNameElement?.textContent || "Unknown";
+      
+      // Skip if no author name (invalid message)
+      if (!authorName || authorName === "Unknown") {
+        continue;
+      }
+      
       const authorClass = authorNameElement ? getChatMessageAuthorClass(item) : "";
       
       // Use optional chaining for potentially missing elements
@@ -290,12 +313,11 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
       const badgeUrl = badgeImg?.src || null;
 
       // Get message content with null safety
-      const messageElement = item.querySelector("#message");
-      const messageText = messageElement?.textContent || "";
+      const messageText = messageElement.textContent || "";
       
       // Create message HTML only if we have actual content
       let messageHTML = null;
-      if (messageElement && messageElement.childNodes.length > 0) {
+      if (messageElement.childNodes.length > 1) { // Only process if more than just text
         messageHTML = createMessageFragment(messageElement);
       }
 
