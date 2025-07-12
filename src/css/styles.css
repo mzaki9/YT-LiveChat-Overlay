@@ -194,11 +194,30 @@
 }
 
 .chat-emoticon {
-  display: inline-block;
-  height: 1em !important;
+  display: inline-block !important;
+  height: 1.5em !important;
   width: auto !important;
-  vertical-align: middle;
-  margin: 0 0.1em;
+  vertical-align: middle !important;
+  margin: 0 0.1em !important;
+  object-fit: contain !important;
+  max-width: none !important;
+  max-height: 1.5em !important;
+  min-height: 1.5em !important;
+}
+
+/* Ensure emoji-only messages are visible */
+.chat-message-text:empty::after {
+  content: "";
+  display: inline-block;
+  height: 1.5em;
+}
+
+/* Specific styling for YouTube emoji images */
+.chat-emoticon.emoji,
+.chat-emoticon[class*="emoji"] {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  height: 1.5em !important;
 }
 
 .chat-badge {

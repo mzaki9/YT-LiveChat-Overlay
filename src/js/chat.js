@@ -203,12 +203,15 @@ function createChatMessageElement(
     messageSpan.textContent = '';
     // Append the fragment
     messageSpan.appendChild(messageHTML);
-  } else if (typeof messageHTML === "string") {
+  } else if (typeof messageHTML === "string" && messageHTML.length > 0) {
     // Fall back to innerHTML for backward compatibility
     messageSpan.innerHTML = messageHTML;
-  } else {
+  } else if (messageText && messageText.length > 0) {
     // Use textContent for simple messages with no formatting (much faster than innerHTML)
     messageSpan.textContent = messageText;
+  } else {
+    // Fallback for empty messages - this shouldn't happen but just in case
+    messageSpan.textContent = "";
   }
 
   chatMessageContent.appendChild(messageSpan);
@@ -286,15 +289,53 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     addProcessedMessageId(messageId);
 
     try {
-      // Early filtering - skip if no meaningful content
+      // Get message element first
       const messageElement = item.querySelector("#message");
-      if (!messageElement || !messageElement.textContent.trim()) {
+      if (!messageElement) {
+        continue;
+      }
+      
+      // Check for meaningful content - text OR emoji images
+      const hasText = messageElement.textContent.trim().length > 0;
+      
+      // Check for emojis with multiple possible selectors
+      const hasEmojis = messageElement.querySelector('img[class*="emoji"]') !== null ||
+                       messageElement.querySelector('img[alt^="�"]') !== null ||
+                       messageElement.querySelector('img[shared-tooltip-text]') !== null ||
+                       messageElement.querySelector('img.emoji') !== null ||
+                       messageElement.querySelector('img[src*="emoji"]') !== null ||
+                       messageElement.querySelector('img[src*="notoemoji"]') !== null ||
+                       messageElement.querySelector('img') !== null; // Fallback: any image
+      
+      // Additional check: if there's any img tag in the innerHTML, consider it has emojis
+      const hasImageInHTML = messageElement.innerHTML.includes('<img');
+      
+      // Debug logging for emoji detection
+      if (!hasText) {
+        const allImages = messageElement.querySelectorAll('img');
+        log(`Message has no text. Found ${allImages.length} images. hasEmojis: ${hasEmojis}, hasImageInHTML: ${hasImageInHTML}`);
+        if (allImages.length > 0) {
+          allImages.forEach((img, idx) => {
+            log(`Image ${idx}: class="${img.className}", alt="${img.alt}", src="${img.src?.substring(0, 100)}..."`);
+          });
+        }
+        log(`Message innerHTML: ${messageElement.innerHTML}`);
+      }
+      
+      // Skip if no meaningful content (neither text nor emojis/images)
+      if (!hasText && !hasEmojis && !hasImageInHTML) {
+        log("Skipping message - no text, emojis, or images detected");
         continue;
       }
       
       // Cache common DOM queries
       const authorNameElement = item.querySelector("#author-name");
       const authorName = authorNameElement?.textContent || "Unknown";
+      
+      // Debug log for emoji-only messages (after authorNameElement is declared)
+      if (!hasText && (hasEmojis || hasImageInHTML)) {
+        log(`Processing emoji/image-only message from ${authorName}`);
+      }
       
       // Skip if no author name (invalid message)
       if (!authorName || authorName === "Unknown") {
@@ -315,9 +356,10 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
       // Get message content with null safety
       const messageText = messageElement.textContent || "";
       
-      // Create message HTML only if we have actual content
+      // Create message HTML for formatted content (emojis, links, etc.)
       let messageHTML = null;
-      if (messageElement.childNodes.length > 1) { // Only process if more than just text
+      if (messageElement.childNodes.length > 0) {
+        // Always process the message HTML if there are child nodes (could be emojis)
         messageHTML = createMessageFragment(messageElement);
       }
 
@@ -380,11 +422,24 @@ function createMessageFragment(messageElement) {
   // Optimize by checking length once
   const nodeCount = messageElement.childNodes.length;
   
+  // Debug log for emoji processing
+  const emojiCount = messageElement.querySelectorAll('img[class*="emoji"]').length;
+  const totalImages = messageElement.querySelectorAll('img').length;
+  if (totalImages > 0) {
+    log(`Processing message with ${totalImages} total images (${emojiCount} matching emoji selector) and ${nodeCount} total nodes`);
+    log(`Message HTML: ${messageElement.innerHTML}`);
+  }
+  
   // Process and clone each node from the original message
   for (let j = 0; j < nodeCount; j++) {
     const node = messageElement.childNodes[j];
 
     try {
+      // Debug log each node
+      if (totalImages > 0) {
+        log(`Node ${j}: type=${node.nodeType}, tagName=${node.tagName}, textContent="${node.textContent}"`);
+      }
+      
       // Handle different node types
       switch (node.nodeType) {
         case Node.TEXT_NODE:
@@ -394,16 +449,38 @@ function createMessageFragment(messageElement) {
         
         case Node.ELEMENT_NODE:
           if (node.tagName === "IMG") {
-            // For image nodes (emoticons), apply our styling
+            // For image nodes (likely emoticons/emojis), apply our styling
             const imgClone = node.cloneNode(false); // shallow clone for performance
-            imgClone.classList.add("chat-emoticon");
+            
+            // Debug log for emoji processing
+            log(`Processing image: src=${node.src?.substring(0, 80)}..., alt="${node.alt}", class="${node.className}"`);
+            
+            // Preserve original classes and add our own
+            if (node.className) {
+              imgClone.className = node.className + " chat-emoticon";
+            } else {
+              imgClone.className = "chat-emoticon";
+            }
+            
+            // Preserve all attributes for proper functionality
+            if (node.alt) {
+              imgClone.alt = node.alt;
+            }
+            if (node.title) {
+              imgClone.title = node.title;
+            }
+            if (node.getAttribute('shared-tooltip-text')) {
+              imgClone.setAttribute('shared-tooltip-text', node.getAttribute('shared-tooltip-text'));
+            }
             
             // Apply all styles at once for better performance
             Object.assign(imgClone.style, {
-              height: "1em",
+              height: "1.5em",
               width: "auto",
               verticalAlign: "middle",
-              objectFit: "contain"
+              objectFit: "contain",
+              display: "inline-block",
+              margin: "0 0.1em"
             });
             
             messageFragment.appendChild(imgClone);
