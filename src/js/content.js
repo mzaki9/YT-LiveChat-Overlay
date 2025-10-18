@@ -38,45 +38,21 @@ function handleFullscreenChange() {
       overlayChatContainer.style.display = "block";
       overlayChatContainer.classList.add("show");
       
-      // Start with adaptive interval for better performance
-      if (typeof measureUpdatePerformance === 'function' && typeof getAdaptiveInterval === 'function') {
-        const monitoredUpdateFunction = measureUpdatePerformance(updateChatMessages);
-        monitoredUpdateFunction(liveChatFrame, chatMessagesContainer);
-        clearInterval(updateInterval);
-        updateInterval = setInterval(() => {
-          monitoredUpdateFunction(liveChatFrame, chatMessagesContainer);
-          
-          // Adapt interval based on performance every 10 updates
-          if (Math.random() < 0.1) { // 10% chance to check and adapt
-            clearInterval(updateInterval);
-            updateInterval = setInterval(() => {
-              monitoredUpdateFunction(liveChatFrame, chatMessagesContainer);
-            }, getAdaptiveInterval());
-          }
-        }, getAdaptiveInterval());
-      } else {
-        // Fallback to basic monitoring if performance module isn't loaded
-        log("Performance monitoring not available, using basic update interval");
-        updateChatMessages(liveChatFrame, chatMessagesContainer);
-        clearInterval(updateInterval);
-        updateInterval = setInterval(() => {
-          updateChatMessages(liveChatFrame, chatMessagesContainer);
-        }, 600);
-      }
+      runAdaptiveUpdateLoop(liveChatFrame, chatMessagesContainer);
     }
   } else {
     toggleButton.style.display = "none";
     toggleButton.classList.remove("show");
     overlayChatContainer.style.display = "none";
     overlayChatContainer.classList.remove("show");
-    clearInterval(updateInterval);
+    stopAdaptiveUpdateLoop();
   }
 }
 
 // Clean up all event listeners and intervals to prevent memory leaks
 function cleanupAllListeners() {
   // Clear intervals
-  clearInterval(updateInterval);
+  stopAdaptiveUpdateLoop();
   clearInterval(injectionInterval);
   
   // Remove document event listeners

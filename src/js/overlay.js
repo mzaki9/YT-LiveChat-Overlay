@@ -5,6 +5,56 @@
 // Variables for tracking the overlay state
 let updateInterval;
 let isOverlayVisible = false;
+let adaptiveUpdateActive = false;
+let monitoredUpdateChatFn = null;
+
+function resolveAdaptiveInterval() {
+  if (typeof getAdaptiveInterval === 'function') {
+    return getAdaptiveInterval();
+  }
+  return 600;
+}
+
+function getMonitoredUpdateFunction() {
+  if (typeof measureUpdatePerformance !== 'function') {
+    return updateChatMessages;
+  }
+  if (!monitoredUpdateChatFn) {
+    monitoredUpdateChatFn = measureUpdatePerformance(updateChatMessages);
+  }
+  return monitoredUpdateChatFn;
+}
+
+function stopAdaptiveUpdateLoop() {
+  adaptiveUpdateActive = false;
+  if (updateInterval) {
+    clearTimeout(updateInterval);
+    updateInterval = null;
+  }
+}
+
+function runAdaptiveUpdateLoop(liveChatFrame, chatMessagesContainer) {
+  stopAdaptiveUpdateLoop();
+
+  if (typeof resetPerformanceMetrics === 'function') {
+    resetPerformanceMetrics();
+  }
+
+  const monitoredUpdate = getMonitoredUpdateFunction();
+  adaptiveUpdateActive = true;
+
+  const execute = () => {
+    if (!adaptiveUpdateActive) {
+      return;
+    }
+    monitoredUpdate(liveChatFrame, chatMessagesContainer);
+    updateInterval = setTimeout(execute, resolveAdaptiveInterval());
+  };
+
+  // Run immediately for fresh state, then schedule follow-ups
+  monitoredUpdate(liveChatFrame, chatMessagesContainer);
+  updateInterval = setTimeout(execute, resolveAdaptiveInterval());
+}
 
 // Create a toggle button for the chat overlay
 function createToggleButton(videoPlayer, toggleCallback) {
@@ -318,19 +368,9 @@ function toggleOverlayChat(
   }
 
   if (isOverlayVisible) {
-    // Create a debounced version of updateChatMessages
-    const debouncedUpdate = debounce(() => {
-      updateChatMessages(liveChatFrame, chatMessagesContainer);
-    }, 500);
-
-    // Update immediately
-    debouncedUpdate();
-
-    // Setup interval for updates
-    clearInterval(updateInterval);
-    updateInterval = setInterval(debouncedUpdate, 800);
+    runAdaptiveUpdateLoop(liveChatFrame, chatMessagesContainer);
   } else {
-    clearInterval(updateInterval);
+    stopAdaptiveUpdateLoop();
   }
 
   // Save the current state to local storage
@@ -364,8 +404,11 @@ function initializeOverlayState(
   const colorfulEnabled = localStorage.getItem("chatColorfulEnabled") !== "false";
   document.documentElement.setAttribute("data-colorful-enabled", colorfulEnabled);
 
-  // Reset chat tracking
+  // Reset chat tracking & performance metrics
   resetChatTracking();
+  if (typeof resetPerformanceMetrics === "function") {
+    resetPerformanceMetrics();
+  }
   
   // The overlay visibility and update intervals are now handled by handleFullscreenChange
   // This avoids conflicts and duplication
@@ -378,7 +421,8 @@ function cleanupOverlay() {
   const existingToggleButton = document.getElementById("toggle-chat-overlay");
 
   // Clear the update interval first to stop any processing
-  clearInterval(updateInterval);
+  stopAdaptiveUpdateLoop();
+  monitoredUpdateChatFn = null;
 
   if (existingOverlay) {
     // Extract elements that need special handling for event listeners

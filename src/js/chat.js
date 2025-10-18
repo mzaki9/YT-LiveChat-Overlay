@@ -242,10 +242,19 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     return false;
   }
 
-  const chatDocument = liveChatFrame.contentDocument;
+  const baseDocument = liveChatFrame.contentDocument;
+  if (!baseDocument) {
+    return false;
+  }
+
+  // Support HyperChat by resolving the nested iframe if present
+  const hyperChatFrame = baseDocument.querySelector('#hyperchat');
+  const chatDocument = hyperChatFrame?.contentDocument || baseDocument;
   if (!chatDocument) {
     return false;
   }
+
+  const isHyperChat = !!chatDocument.querySelector('.hyperchat-root');
 
   // Cache scroll measurements once
   const scrollTop = chatMessagesContainer.scrollTop;
@@ -253,141 +262,148 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
   const scrollHeight = chatMessagesContainer.scrollHeight;
   const isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
 
-  // Use more specific selector with single query
-  const chatItems = chatDocument.querySelectorAll(
-    "yt-live-chat-text-message-renderer:not([processed]), yt-live-chat-paid-message-renderer:not([processed])"
-  );
-
-  // Use document fragment for batch DOM updates
-  const fragment = document.createDocumentFragment();
-  let newMessages = 0;
-  
-  // Process only visible + buffer zone items for better performance
-  const containerHeight = chatMessagesContainer.clientHeight;
-  const avgMessageHeight = 40; // Approximate message height
-  const visibleCount = Math.ceil(containerHeight / avgMessageHeight);
-  const bufferSize = Math.min(20, visibleCount); // Buffer for smooth scrolling
-  
-  // Process only the most recent messages that could be visible
-  const totalItems = chatItems.length;
-  const maxProcessItems = Math.min(MAX_NEW_MESSAGES, visibleCount + bufferSize);
-  const startIndex = Math.max(0, totalItems - maxProcessItems);
-  
-  for (let i = startIndex; i < totalItems; i++) {
-    const item = chatItems[i];
-    
-    // Mark as processed in DOM to avoid reprocessing
-    item.setAttribute('processed', 'true');
-    
-    // Skip items without IDs or already processed in memory
-    const messageId = item.getAttribute("id");
-    if (!messageId || isMessageProcessed(messageId)) {
-      continue;
+  if (isHyperChat) {
+    const processed = processHyperChatMessages(chatDocument, chatMessagesContainer);
+    if (!processed) {
+      return false;
     }
+  } else {
+    // Use more specific selector with single query
+    const chatItems = chatDocument.querySelectorAll(
+      "yt-live-chat-text-message-renderer:not([processed]), yt-live-chat-paid-message-renderer:not([processed])"
+    );
 
-    // Mark as processed early to prevent duplicates even if processing fails
-    addProcessedMessageId(messageId);
-
-    try {
-      // Get message element first
-      const messageElement = item.querySelector("#message");
-      if (!messageElement) {
+    // Use document fragment for batch DOM updates
+    const fragment = document.createDocumentFragment();
+    let newMessages = 0;
+    
+    // Process only visible + buffer zone items for better performance
+    const containerHeight = chatMessagesContainer.clientHeight;
+    const avgMessageHeight = 40; // Approximate message height
+    const visibleCount = Math.ceil(containerHeight / avgMessageHeight);
+    const bufferSize = Math.min(20, visibleCount); // Buffer for smooth scrolling
+    
+    // Process only the most recent messages that could be visible
+    const totalItems = chatItems.length;
+    const maxProcessItems = Math.min(MAX_NEW_MESSAGES, visibleCount + bufferSize);
+    const startIndex = Math.max(0, totalItems - maxProcessItems);
+    
+    for (let i = startIndex; i < totalItems; i++) {
+      const item = chatItems[i];
+      
+      // Mark as processed in DOM to avoid reprocessing
+      item.setAttribute('processed', 'true');
+      
+      // Skip items without IDs or already processed in memory
+      const messageId = item.getAttribute("id");
+      if (!messageId || isMessageProcessed(messageId)) {
         continue;
       }
-      
-      // Check for meaningful content - text OR emoji images
-      const hasText = messageElement.textContent.trim().length > 0;
-      
-      // Check for emojis with multiple possible selectors
-      const hasEmojis = messageElement.querySelector('img[class*="emoji"]') !== null ||
-                       messageElement.querySelector('img[alt^="�"]') !== null ||
-                       messageElement.querySelector('img[shared-tooltip-text]') !== null ||
-                       messageElement.querySelector('img.emoji') !== null ||
-                       messageElement.querySelector('img[src*="emoji"]') !== null ||
-                       messageElement.querySelector('img[src*="notoemoji"]') !== null ||
-                       messageElement.querySelector('img') !== null; // Fallback: any image
-      
-      // Additional check: if there's any img tag in the innerHTML, consider it has emojis
-      const hasImageInHTML = messageElement.innerHTML.includes('<img');
-      
-      // Debug logging for emoji detection
-      if (!hasText) {
-        const allImages = messageElement.querySelectorAll('img');
-        log(`Message has no text. Found ${allImages.length} images. hasEmojis: ${hasEmojis}, hasImageInHTML: ${hasImageInHTML}`);
-        if (allImages.length > 0) {
-          allImages.forEach((img, idx) => {
-            log(`Image ${idx}: class="${img.className}", alt="${img.alt}", src="${img.src?.substring(0, 100)}..."`);
-          });
+
+      // Mark as processed early to prevent duplicates even if processing fails
+      addProcessedMessageId(messageId);
+
+      try {
+        // Get message element first
+        const messageElement = item.querySelector("#message");
+        if (!messageElement) {
+          continue;
         }
-        log(`Message innerHTML: ${messageElement.innerHTML}`);
-      }
-      
-      // Skip if no meaningful content (neither text nor emojis/images)
-      if (!hasText && !hasEmojis && !hasImageInHTML) {
-        log("Skipping message - no text, emojis, or images detected");
-        continue;
-      }
-      
-      // Cache common DOM queries
-      const authorNameElement = item.querySelector("#author-name");
-      const authorName = authorNameElement?.textContent || "Unknown";
-      
-      // Debug log for emoji-only messages (after authorNameElement is declared)
-      if (!hasText && (hasEmojis || hasImageInHTML)) {
-        log(`Processing emoji/image-only message from ${authorName}`);
-      }
-      
-      // Skip if no author name (invalid message)
-      if (!authorName || authorName === "Unknown") {
-        continue;
-      }
-      
-      const authorClass = authorNameElement ? getChatMessageAuthorClass(item) : "";
-      
-      // Use optional chaining for potentially missing elements
-      const authorPhoto = item.querySelector("#img")?.src || "";
+        
+        // Check for meaningful content - text OR emoji images
+        const hasText = messageElement.textContent.trim().length > 0;
+        
+        // Check for emojis with multiple possible selectors
+        const hasEmojis = messageElement.querySelector('img[class*="emoji"]') !== null ||
+                         messageElement.querySelector('img[alt^="�"]') !== null ||
+                         messageElement.querySelector('img[shared-tooltip-text]') !== null ||
+                         messageElement.querySelector('img.emoji') !== null ||
+                         messageElement.querySelector('img[src*="emoji"]') !== null ||
+                         messageElement.querySelector('img[src*="notoemoji"]') !== null ||
+                         messageElement.querySelector('img') !== null; // Fallback: any image
+        
+        // Additional check: if there's any img tag in the innerHTML, consider it has emojis
+        const hasImageInHTML = messageElement.innerHTML.includes('<img');
+        
+        // Debug logging for emoji detection
+        if (!hasText) {
+          const allImages = messageElement.querySelectorAll('img');
+          log(`Message has no text. Found ${allImages.length} images. hasEmojis: ${hasEmojis}, hasImageInHTML: ${hasImageInHTML}`);
+          if (allImages.length > 0) {
+            allImages.forEach((img, idx) => {
+              log(`Image ${idx}: class="${img.className}", alt="${img.alt}", src="${img.src?.substring(0, 100)}..."`);
+            });
+          }
+          log(`Message innerHTML: ${messageElement.innerHTML}`);
+        }
+        
+        // Skip if no meaningful content (neither text nor emojis/images)
+        if (!hasText && !hasEmojis && !hasImageInHTML) {
+          log("Skipping message - no text, emojis, or images detected");
+          continue;
+        }
+        
+        // Cache common DOM queries
+        const authorNameElement = item.querySelector("#author-name");
+        const authorName = authorNameElement?.textContent || "Unknown";
+        
+        // Debug log for emoji-only messages (after authorNameElement is declared)
+        if (!hasText && (hasEmojis || hasImageInHTML)) {
+          log(`Processing emoji/image-only message from ${authorName}`);
+        }
+        
+        // Skip if no author name (invalid message)
+        if (!authorName || authorName === "Unknown") {
+          continue;
+        }
+        
+        const authorClass = authorNameElement ? getChatMessageAuthorClass(item) : "";
+        
+        // Use optional chaining for potentially missing elements
+        const authorPhoto = item.querySelector("#img")?.src || "";
 
-      // Simplified badge detection - use optional chaining
-      const badgeImg = item.querySelector(
-        "yt-live-chat-author-badge-renderer img"
-      );
-      const badgeUrl = badgeImg?.src || null;
+        // Simplified badge detection - use optional chaining
+        const badgeImg = item.querySelector(
+          "yt-live-chat-author-badge-renderer img"
+        );
+        const badgeUrl = badgeImg?.src || null;
 
-      // Get message content with null safety
-      const messageText = messageElement.textContent || "";
-      
-      // Create message HTML for formatted content (emojis, links, etc.)
-      let messageHTML = null;
-      if (messageElement.childNodes.length > 0) {
-        // Always process the message HTML if there are child nodes (could be emojis)
-        messageHTML = createMessageFragment(messageElement);
+        // Get message content with null safety
+        const messageText = messageElement.textContent || "";
+        
+        // Create message HTML for formatted content (emojis, links, etc.)
+        let messageHTML = null;
+        if (messageElement.childNodes.length > 0) {
+          // Always process the message HTML if there are child nodes (could be emojis)
+          messageHTML = createMessageFragment(messageElement);
+        }
+
+        // Create the chat message element and add to fragment
+        const chatMessageElement = createChatMessageElement(
+          authorName,
+          authorPhoto,
+          badgeUrl,
+          messageText,
+          authorClass,
+          messageHTML
+        );
+
+        fragment.appendChild(chatMessageElement);
+        newMessages++;
+      } catch (error) {
+        // Silently catch errors to prevent breaking the chat functionality
+        console.error("Error processing chat message:", error);
       }
-
-      // Create the chat message element and add to fragment
-      const chatMessageElement = createChatMessageElement(
-        authorName,
-        authorPhoto,
-        badgeUrl,
-        messageText,
-        authorClass,
-        messageHTML
-      );
-
-      fragment.appendChild(chatMessageElement);
-      newMessages++;
-    } catch (error) {
-      // Silently catch errors to prevent breaking the chat functionality
-      console.error("Error processing chat message:", error);
     }
-  }
 
-  // Only manipulate DOM if we have new messages
-  if (newMessages === 0) {
-    return false;
-  }
+    // Only manipulate DOM if we have new messages
+    if (newMessages === 0) {
+      return false;
+    }
 
-  // Add all messages at once
-  chatMessagesContainer.appendChild(fragment);
+    // Add all messages at once
+    chatMessagesContainer.appendChild(fragment);
+  }
 
   // Remove old messages more efficiently
   const childrenCount = chatMessagesContainer.childElementCount;
@@ -415,100 +431,246 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
 }
 
 // Helper function to create a document fragment from a message element
-function createMessageFragment(messageElement) {
-  // Create a new document fragment
-  const messageFragment = document.createDocumentFragment();
+function cloneAndSanitizeNode(node, shouldLogImages) {
+  if (!node) {
+    return null;
+  }
 
-  // Optimize by checking length once
+  try {
+    switch (node.nodeType) {
+      case Node.TEXT_NODE:
+        return node.cloneNode(true);
+
+      case Node.ELEMENT_NODE: {
+        if (node.tagName === "IMG") {
+          if (shouldLogImages) {
+            log(`Processing image: src=${node.src?.substring(0, 80)}..., alt="${node.alt}", class="${node.className}"`);
+          }
+
+          const imgClone = node.cloneNode(false);
+
+          if (node.className) {
+            imgClone.className = `${node.className} chat-emoticon`;
+          } else {
+            imgClone.className = "chat-emoticon";
+          }
+
+          imgClone.removeAttribute("height");
+          imgClone.removeAttribute("width");
+          imgClone.removeAttribute("style");
+
+          if (node.alt) {
+            imgClone.alt = node.alt;
+          }
+          if (node.title) {
+            imgClone.title = node.title;
+          }
+          if (node.getAttribute("shared-tooltip-text")) {
+            imgClone.setAttribute(
+              "shared-tooltip-text",
+              node.getAttribute("shared-tooltip-text")
+            );
+          }
+
+          return imgClone;
+        }
+
+        const elementClone = node.cloneNode(false);
+        const childCount = node.childNodes.length;
+        for (let i = 0; i < childCount; i++) {
+          const childClone = cloneAndSanitizeNode(
+            node.childNodes[i],
+            shouldLogImages
+          );
+          if (childClone) {
+            elementClone.appendChild(childClone);
+          }
+        }
+        return elementClone;
+      }
+
+      default:
+        return null;
+    }
+  } catch (error) {
+    console.error("Error cloning message node:", error);
+    return null;
+  }
+}
+
+function createMessageFragment(messageElement) {
+  const messageFragment = document.createDocumentFragment();
   const nodeCount = messageElement.childNodes.length;
-  
-  // Debug log for emoji processing
+
   const emojiCount = messageElement.querySelectorAll('img[class*="emoji"]').length;
   const totalImages = messageElement.querySelectorAll('img').length;
   if (totalImages > 0) {
     log(`Processing message with ${totalImages} total images (${emojiCount} matching emoji selector) and ${nodeCount} total nodes`);
     log(`Message HTML: ${messageElement.innerHTML}`);
   }
-  
-  // Process and clone each node from the original message
+
   for (let j = 0; j < nodeCount; j++) {
     const node = messageElement.childNodes[j];
 
-    try {
-      // Debug log each node
-      if (totalImages > 0) {
-        log(`Node ${j}: type=${node.nodeType}, tagName=${node.tagName}, textContent="${node.textContent}"`);
-      }
-      
-      // Handle different node types
-      switch (node.nodeType) {
-        case Node.TEXT_NODE:
-          // For text nodes, just clone them
-          messageFragment.appendChild(node.cloneNode(true));
-          break;
-        
-        case Node.ELEMENT_NODE:
-          if (node.tagName === "IMG") {
-            // For image nodes (likely emoticons/emojis), apply our styling
-            const imgClone = node.cloneNode(false); // shallow clone for performance
-            
-            // Debug log for emoji processing
-            log(`Processing image: src=${node.src?.substring(0, 80)}..., alt="${node.alt}", class="${node.className}"`);
-            
-            // Preserve original classes and add our own
-            if (node.className) {
-              imgClone.className = node.className + " chat-emoticon";
-            } else {
-              imgClone.className = "chat-emoticon";
-            }
-            
-            // Preserve all attributes for proper functionality
-            if (node.alt) {
-              imgClone.alt = node.alt;
-            }
-            if (node.title) {
-              imgClone.title = node.title;
-            }
-            if (node.getAttribute('shared-tooltip-text')) {
-              imgClone.setAttribute('shared-tooltip-text', node.getAttribute('shared-tooltip-text'));
-            }
-            
-            // Apply all styles at once for better performance
-            Object.assign(imgClone.style, {
-              height: "1.5em",
-              width: "auto",
-              verticalAlign: "middle",
-              objectFit: "contain",
-              display: "inline-block",
-              margin: "0 0.1em"
-            });
-            
-            messageFragment.appendChild(imgClone);
-          } else {
-            // For other element nodes, clone them
-            messageFragment.appendChild(node.cloneNode(true));
-          }
-          break;
-          
-        default:
-          // Skip other node types
-          break;
-      }
-    } catch (error) {
-      // Catch errors for individual nodes without breaking the entire process
-      console.error("Error processing message node:", error);
+    if (totalImages > 0) {
+      log(
+        `Node ${j}: type=${node.nodeType}, tagName=${node.tagName}, textContent="${node.textContent}"`
+      );
+    }
+
+    const clonedNode = cloneAndSanitizeNode(node, totalImages > 0);
+    if (clonedNode) {
+      messageFragment.appendChild(clonedNode);
     }
   }
 
-  // Keep reference to the fragment for the message element
   messageFragment.isDocumentFragment = true;
   return messageFragment;
+}
+
+let hyperChatNodeIds = new WeakMap();
+
+function getHyperChatMessageId(node, fallbackParts) {
+  if (hyperChatNodeIds.has(node)) {
+    return hyperChatNodeIds.get(node);
+  }
+
+  const sourceString = fallbackParts.filter(Boolean).join('|');
+  let hash = 0;
+  for (let i = 0; i < sourceString.length; i++) {
+    hash = (hash << 5) - hash + sourceString.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  const id = `hyperchat:${Math.abs(hash)}`;
+  hyperChatNodeIds.set(node, id);
+  return id;
+}
+
+function cloneElementChildrenToFragment(sourceElement) {
+  if (!sourceElement) {
+    return null;
+  }
+  const fragment = document.createDocumentFragment();
+  const childNodes = sourceElement.childNodes;
+  for (let i = 0; i < childNodes.length; i++) {
+    fragment.appendChild(childNodes[i].cloneNode(true));
+  }
+  fragment.isDocumentFragment = true;
+  return fragment;
+}
+
+function deriveHyperChatAuthorClass(nameElement) {
+  if (!nameElement) {
+    return '';
+  }
+  const classTokens = Array.from(nameElement.classList);
+  if (classTokens.some((token) => token.includes('moderator') || token.includes('owner'))) {
+    return 'author-moderator';
+  }
+  if (classTokens.some((token) => token.includes('member'))) {
+    return 'author-member';
+  }
+  return '';
+}
+
+function extractHyperChatMessageData(messageNode) {
+  const wrapper = messageNode.querySelector('.inline-flex');
+  if (!wrapper) {
+    return null;
+  }
+
+  const nameElement = wrapper.querySelector('[class*="tracking-wide"]');
+  const fallbackNameElement = wrapper.querySelector('.font-bold');
+  const authorName = nameElement?.textContent?.trim() || fallbackNameElement?.textContent?.trim() || 'Unknown';
+
+  const avatarImg = wrapper.querySelector('img.rounded-full');
+  const authorPhoto = avatarImg?.src || '';
+
+  // Attempt to locate badge that isn't the avatar or emoji
+  let badgeUrl = null;
+  const badgeCandidate = wrapper.querySelector('img:not(.rounded-full):not(.chat-emoticon)');
+  if (badgeCandidate?.src && badgeCandidate !== avatarImg) {
+    badgeUrl = badgeCandidate.src;
+  }
+
+  const messageSpan = wrapper.querySelector('span[style*="word-break"]');
+  let messageText = '';
+  let messageHTML = null;
+
+  if (messageSpan) {
+    messageText = messageSpan.textContent?.trim() || '';
+    messageHTML = cloneElementChildrenToFragment(messageSpan);
+  } else {
+    messageText = wrapper.textContent?.trim() || '';
+  }
+
+  const timestamp = wrapper.querySelector('span.text-xs')?.textContent?.trim() || '';
+
+  const messageId = getHyperChatMessageId(messageNode, [authorName, timestamp, messageText, authorPhoto, badgeUrl]);
+
+  return {
+    messageId,
+    authorName,
+    authorPhoto,
+    badgeUrl,
+    messageText,
+    messageHTML,
+    authorClass: deriveHyperChatAuthorClass(nameElement || fallbackNameElement)
+  };
+}
+
+function processHyperChatMessages(chatDocument, chatMessagesContainer) {
+  const messageNodes = chatDocument.querySelectorAll('.content .hover-highlight');
+  if (!messageNodes || messageNodes.length === 0) {
+    return false;
+  }
+
+  const fragment = document.createDocumentFragment();
+  let newMessages = 0;
+
+  const totalItems = messageNodes.length;
+  const maxProcessItems = Math.min(MAX_NEW_MESSAGES, totalItems);
+  const startIndex = Math.max(0, totalItems - maxProcessItems);
+
+  for (let i = startIndex; i < totalItems; i++) {
+    const node = messageNodes[i];
+    const data = extractHyperChatMessageData(node);
+    if (!data) {
+      continue;
+    }
+
+    if (isMessageProcessed(data.messageId)) {
+      continue;
+    }
+
+    addProcessedMessageId(data.messageId);
+
+    const chatMessageElement = createChatMessageElement(
+      data.authorName,
+      data.authorPhoto,
+      data.badgeUrl,
+      data.messageText,
+      data.authorClass,
+      data.messageHTML
+    );
+
+    fragment.appendChild(chatMessageElement);
+    newMessages++;
+  }
+
+  if (newMessages === 0) {
+    return false;
+  }
+
+  chatMessagesContainer.appendChild(fragment);
+  return true;
 }
 
 // Clear chat message tracking variables
 function resetChatTracking() {
   lastMessageId = null;
   processedMessageIds.clear(); // Clear the Set
+  hyperChatNodeIds = new WeakMap();
 
   // Trim element pools to prevent excessive memory usage
   elementPool.trimPools(MAX_MESSAGES);

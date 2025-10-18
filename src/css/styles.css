@@ -193,31 +193,37 @@
   align-items: center;
 }
 
-.chat-emoticon {
-  display: inline-block !important;
-  height: 1.5em !important;
+.chat-emoticon,
+.chat-emoticon.emoji,
+.chat-emoticon[class*="emoji"] {
+  display: inline-flex !important;
+  height: calc(var(--chat-font-size) * 1.1) !important;
   width: auto !important;
-  vertical-align: middle !important;
-  margin: 0 0.1em !important;
+  min-height: calc(var(--chat-font-size) * 1.1) !important;
+  max-height: calc(var(--chat-font-size) * 1.1) !important;
+  vertical-align: -0.15em !important;
+  margin: 0 calc(var(--chat-font-size) * 0.05) !important;
   object-fit: contain !important;
   max-width: none !important;
-  max-height: 1.5em !important;
-  min-height: 1.5em !important;
+}
+
+.chat-message-text img {
+  display: inline-flex;
+  height: calc(var(--chat-font-size) * 1.1);
+  width: auto;
+  min-height: calc(var(--chat-font-size) * 1.1);
+  max-height: calc(var(--chat-font-size) * 1.1);
+  vertical-align: -0.15em;
+  margin: 0 calc(var(--chat-font-size) * 0.05);
+  object-fit: contain;
+  max-width: none;
 }
 
 /* Ensure emoji-only messages are visible */
 .chat-message-text:empty::after {
   content: "";
   display: inline-block;
-  height: 1.5em;
-}
-
-/* Specific styling for YouTube emoji images */
-.chat-emoticon.emoji,
-.chat-emoticon[class*="emoji"] {
-  display: inline-block !important;
-  vertical-align: middle !important;
-  height: 1.5em !important;
+  height: calc(var(--chat-font-size) * 1.1);
 }
 
 .chat-badge {
