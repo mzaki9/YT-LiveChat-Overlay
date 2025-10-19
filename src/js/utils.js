@@ -28,11 +28,22 @@ function debounce(func, wait) {
       timeout = setTimeout(later, wait - timeSinceLastCall);
     };
   }
-  
- 
-  function log(message) {
-    console.log(`[YT Chat Overlay] ${message}`);
+const DEBUG_FLAG_KEY = 'ytOverlayDebug';
+
+function isDebugEnabled() {
+  try {
+    return localStorage.getItem(DEBUG_FLAG_KEY) === 'true';
+  } catch (err) {
+    return false;
   }
+}
+
+function log(message) {
+  if (!isDebugEnabled()) {
+    return;
+  }
+  console.log(`[YT Chat Overlay] ${message}`);
+}
 
   function findChatFrame() {
   // Search for chat frame with various selectors

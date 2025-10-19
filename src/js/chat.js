@@ -8,7 +8,9 @@ let processedMessageIds = new Set();
 const MAX_MESSAGES = 100;
 const MAX_NEW_MESSAGES = 100;
 // Maximum size for the sliding window of processed IDs
-const MAX_PROCESSED_IDS = 500;
+const MAX_PROCESSED_IDS = 400;
+// Cap for HyperChat DOM nodes retained to mirror native pruning behaviour
+const MAX_HYPERCHAT_DOM_NODES = 320;
 
 // DOM Element Pool for chat messages
 const elementPool = {
@@ -69,49 +71,78 @@ const elementPool = {
 
   // Return elements to the pool
   recycle: function (element) {
-    // Clear the element of any content and event listeners
     if (!element) {
       return;
     }
 
-    // Remove all event listeners by cloning and replacing
-    const cleanElement = element.cloneNode(false);
+    const recycleNode = (node) => {
+      if (!node) {
+        return;
+      }
 
-    // Clear children if it's a container
+      if (node.classList?.contains("chat-message-profile")) {
+        if (node.tagName === "IMG") {
+          node.removeAttribute("src");
+        }
+        node.removeAttribute("style");
+        this.profileImgs.push(node);
+        return;
+      }
+
+      if (node.classList?.contains("chat-message-author")) {
+        node.removeAttribute("style");
+        node.textContent = "";
+        this.authors.push(node);
+        return;
+      }
+
+      if (node.classList?.contains("chat-message-text")) {
+        node.textContent = "";
+        node.innerHTML = "";
+        this.messageTexts.push(node);
+        return;
+      }
+
+      if (node.classList?.contains("chat-badge")) {
+        if (node.tagName === "IMG") {
+          node.removeAttribute("src");
+        }
+        node.removeAttribute("style");
+        this.badges.push(node);
+        return;
+      }
+
+      if (node.classList?.contains("chat-message-content")) {
+        while (node.firstChild) {
+          recycleNode(node.firstChild);
+          node.removeChild(node.firstChild);
+        }
+        node.textContent = "";
+        this.contentContainers.push(node);
+        return;
+      }
+
+      // For any other element nodes, detach their children and discard
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        while (node.firstChild) {
+          recycleNode(node.firstChild);
+          node.removeChild(node.firstChild);
+        }
+      }
+    };
+
     while (element.firstChild) {
       const child = element.firstChild;
       element.removeChild(child);
-
-      // Determine type of child and recycle it
-      if (child.classList?.contains("chat-message-profile")) {
-        // Clear src to prevent memory leaks from image references
-        if (child.tagName === 'IMG') child.src = '';
-        this.profileImgs.push(child);
-      } else if (child.classList?.contains("chat-message-content")) {
-        // Recycle the content container directly
-        child.innerHTML = ''; // Clear all children
-        this.contentContainers.push(child);
-      } else if (child.classList?.contains("chat-message-author")) {
-        // Clear any styling
-        child.style = '';
-        this.authors.push(child);
-      } else if (child.classList?.contains("chat-message-text")) {
-        // Clear any content
-        child.innerHTML = '';
-        this.messageTexts.push(child);
-      } else if (child.classList?.contains("chat-badge")) {
-        // Clear src to prevent memory leaks from image references
-        if (child.tagName === 'IMG') child.src = '';
-        this.badges.push(child);
-      }
+      recycleNode(child);
     }
 
-    // Add the empty parent element back to the pool
-    if (cleanElement.classList?.contains("chat-message")) {
-      // Remove all styles, classes, and attributes except the class 'chat-message'
-      cleanElement.setAttribute("class", "chat-message");
-      cleanElement.style = "";
-      this.messages.push(cleanElement);
+    element.className = "chat-message";
+    element.removeAttribute("style");
+    this.messages.push(element);
+
+    if (this.messages.length > MAX_MESSAGES * 2) {
+      this.trimPools(MAX_MESSAGES);
     }
   },
   
@@ -663,6 +694,17 @@ function processHyperChatMessages(chatDocument, chatMessagesContainer) {
   }
 
   chatMessagesContainer.appendChild(fragment);
+
+  if (messageNodes.length > MAX_HYPERCHAT_DOM_NODES) {
+    const excess = messageNodes.length - MAX_HYPERCHAT_DOM_NODES;
+    for (let i = 0; i < excess; i++) {
+      const staleNode = messageNodes[i];
+      if (staleNode && typeof staleNode.remove === 'function') {
+        staleNode.remove();
+      }
+    }
+  }
+
   return true;
 }
 
