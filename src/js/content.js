@@ -5,6 +5,9 @@
 // Main variables
 let videoPlayer;
 let liveChatFrame;
+let chatFrameLoadListener;
+let chatFrameObserver;
+let pendingFrameRefresh;
 let overlayChatContainer;
 let chatMessagesContainer;
 let toggleButton;
@@ -50,7 +53,75 @@ function handleFullscreenChange() {
 }
 
 // Clean up all event listeners and intervals to prevent memory leaks
-function cleanupAllListeners() {
+function detachLiveChatFrameListeners() {
+  if (liveChatFrame && chatFrameLoadListener) {
+    liveChatFrame.removeEventListener("load", chatFrameLoadListener);
+  }
+  chatFrameLoadListener = null;
+
+  if (chatFrameObserver) {
+    chatFrameObserver.disconnect();
+    chatFrameObserver = null;
+  }
+}
+
+function scheduleChatFrameRefresh(reason) {
+  if (!chatMessagesContainer) {
+    return;
+  }
+
+  if (!pendingFrameRefresh) {
+    pendingFrameRefresh = setTimeout(() => {
+      pendingFrameRefresh = null;
+      log(`Refreshing overlay after chat frame change (${reason})`);
+
+      while (chatMessagesContainer.firstChild) {
+        const child = chatMessagesContainer.firstChild;
+        chatMessagesContainer.removeChild(child);
+        if (typeof elementPool !== "undefined" && elementPool?.recycle) {
+          elementPool.recycle(child);
+        }
+      }
+
+      resetChatTracking();
+      if (typeof resetPerformanceMetrics === "function") {
+        resetPerformanceMetrics();
+      }
+
+      if (isOverlayVisible && liveChatFrame) {
+        stopAdaptiveUpdateLoop();
+        runAdaptiveUpdateLoop(liveChatFrame, chatMessagesContainer);
+      }
+    }, 150);
+  }
+}
+
+function attachLiveChatFrameListeners(frame) {
+  detachLiveChatFrameListeners();
+
+  if (!frame) {
+    return;
+  }
+
+  chatFrameLoadListener = () => scheduleChatFrameRefresh("iframe load");
+  frame.addEventListener("load", chatFrameLoadListener, { passive: true });
+
+  chatFrameObserver = new MutationObserver((mutations) => {
+    if (!mutations?.length) {
+      return;
+    }
+    scheduleChatFrameRefresh("iframe src mutation");
+  });
+
+  chatFrameObserver.observe(frame, { attributes: true, attributeFilter: ["src"] });
+
+  if (frame.contentDocument?.readyState === "complete") {
+    scheduleChatFrameRefresh("iframe ready");
+  }
+}
+
+function cleanupAllListeners(options = {}) {
+  const keepUrlObserver = options.keepUrlObserver === true;
   // Clear intervals
   stopAdaptiveUpdateLoop();
   clearInterval(injectionInterval);
@@ -67,7 +138,14 @@ function cleanupAllListeners() {
   }
   
   // Disconnect observer
-  if (urlObserver) {
+  detachLiveChatFrameListeners();
+
+  if (pendingFrameRefresh) {
+    clearTimeout(pendingFrameRefresh);
+    pendingFrameRefresh = null;
+  }
+
+  if (!keepUrlObserver && urlObserver) {
     urlObserver.disconnect();
     urlObserver = null;
   }
@@ -79,7 +157,7 @@ function cleanupAllListeners() {
 // Main function to initialize the extension
 function injectLiveChatOverlay() {
   // Clean up previous instance first
-  cleanupAllListeners();
+  cleanupAllListeners({ keepUrlObserver: true });
   
   // Find required elements with more robust selectors
   videoPlayer = document.querySelector(".html5-video-player") || 
@@ -90,6 +168,7 @@ function injectLiveChatOverlay() {
   
   // Use the findChatFrame utility function
   liveChatFrame = findChatFrame();
+  attachLiveChatFrameListeners(liveChatFrame);
 
   // Log what we found for easier debugging
   log(`Video player found: ${videoPlayer ? "Yes" : "No"}`);
@@ -201,6 +280,7 @@ function setupUrlObserver() {
 function attemptChatDetection() {
   liveChatFrame = findChatFrame();
   if (liveChatFrame) {
+    attachLiveChatFrameListeners(liveChatFrame);
     log("Chat frame found, attempting to inject overlay");
     const success = injectLiveChatOverlay();
     if (success) {

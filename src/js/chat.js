@@ -267,7 +267,7 @@ function addProcessedMessageId(messageId) {
   }
 }
 
-function updateChatMessages(liveChatFrame, chatMessagesContainer) {
+function updateChatMessages(liveChatFrame, chatMessagesContainer, metadata) {
   // Only process if the overlay is visible
   if (!isOverlayVisible || !liveChatFrame || !chatMessagesContainer) {
     return false;
@@ -298,10 +298,13 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     if (!processed) {
       return false;
     }
+    if (metadata) {
+      metadata.processedHyperChat = true;
+    }
   } else {
     // Use more specific selector with single query
     const chatItems = chatDocument.querySelectorAll(
-      "yt-live-chat-text-message-renderer:not([processed]), yt-live-chat-paid-message-renderer:not([processed])"
+      "yt-live-chat-text-message-renderer, yt-live-chat-paid-message-renderer"
     );
 
     // Use document fragment for batch DOM updates
@@ -321,9 +324,6 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
     
     for (let i = startIndex; i < totalItems; i++) {
       const item = chatItems[i];
-      
-      // Mark as processed in DOM to avoid reprocessing
-      item.setAttribute('processed', 'true');
       
       // Skip items without IDs or already processed in memory
       const messageId = item.getAttribute("id");
@@ -434,6 +434,9 @@ function updateChatMessages(liveChatFrame, chatMessagesContainer) {
 
     // Add all messages at once
     chatMessagesContainer.appendChild(fragment);
+    if (metadata) {
+      metadata.processedNative = true;
+    }
   }
 
   // Remove old messages more efficiently

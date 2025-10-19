@@ -28,7 +28,7 @@ function getMonitoredUpdateFunction() {
 function stopAdaptiveUpdateLoop() {
   adaptiveUpdateActive = false;
   if (updateInterval) {
-    clearTimeout(updateInterval);
+    clearInterval(updateInterval);
     updateInterval = null;
   }
 }
@@ -43,17 +43,32 @@ function runAdaptiveUpdateLoop(liveChatFrame, chatMessagesContainer) {
   const monitoredUpdate = getMonitoredUpdateFunction();
   adaptiveUpdateActive = true;
 
-  const execute = () => {
+  let currentInterval = resolveAdaptiveInterval();
+
+  const tick = () => {
     if (!adaptiveUpdateActive) {
       return;
     }
-    monitoredUpdate(liveChatFrame, chatMessagesContainer);
-    updateInterval = setTimeout(execute, resolveAdaptiveInterval());
+
+    const metadata = { processedNative: false, processedHyperChat: false };
+    try {
+      monitoredUpdate(liveChatFrame, chatMessagesContainer, metadata);
+    } catch (error) {
+      console.error("Chat overlay update failed", error);
+    }
+
+    const desiredInterval = resolveAdaptiveInterval();
+    if (Math.abs(desiredInterval - currentInterval) > 50) {
+      currentInterval = desiredInterval;
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = setInterval(tick, currentInterval);
+      }
+    }
   };
 
-  // Run immediately for fresh state, then schedule follow-ups
-  monitoredUpdate(liveChatFrame, chatMessagesContainer);
-  updateInterval = setTimeout(execute, resolveAdaptiveInterval());
+  tick();
+  updateInterval = setInterval(tick, currentInterval);
 }
 
 // Create a toggle button for the chat overlay
