@@ -1,26 +1,18 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
-
-// Check for needed dependencies
-try {
-  console.log('Checking for web-ext...');
-  execSync('npx web-ext --version', { stdio: 'inherit' });
-} catch (error) {
-  console.error('web-ext not found, installing...');
-  execSync('npm install web-ext --save-dev', { stdio: 'inherit' });
-}
+const webExt = require('web-ext');
 
 // Validate the file structure before building
-function validateFiles() {
+function validateFiles(manifestName) {
   const requiredFiles = [
-    'manifest.json',
+    manifestName || 'manifest.json',
     'icon.png',
     'js/utils.js',
+    'js/performance.js',
     'js/ui.js',
-    'js/chat.js',
     'js/overlay.js',
     'js/content.js',
+    'js/background.js',
     'css/styles.css'
   ];
   
@@ -41,7 +33,6 @@ function cleanBOMFromFiles() {
   const jsFiles = [
     'js/utils.js',
     'js/ui.js',
-    'js/chat.js',
     'js/overlay.js',
     'js/content.js',
   ];
@@ -51,7 +42,8 @@ function cleanBOMFromFiles() {
   ];
   
   const jsonFiles = [
-    'manifest.json'
+    'manifest.json',
+    'manifest-firefox.json'
   ];
   
   // Check and clean JavaScript files
@@ -83,10 +75,56 @@ function cleanBOMFromFiles() {
   }
 }
 
+function copyFileToDir(relativePath, outputDir) {
+  const source = path.join(__dirname, relativePath);
+  const destination = path.join(outputDir, relativePath);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(source, destination);
+}
+
+function buildChromeUnpacked() {
+  const outputDir = path.join(__dirname, 'web-ext-artifacts', 'chrome-unpacked');
+  fs.rmSync(outputDir, { recursive: true, force: true });
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  const files = [
+    'manifest.json',
+    'icon.png',
+    'css/styles.css',
+    'js/background.js',
+    'js/content.js',
+    'js/overlay.js',
+    'js/performance.js',
+    'js/ui.js',
+    'js/utils.js'
+  ];
+
+  for (const file of files) {
+    copyFileToDir(file, outputDir);
+  }
+
+  return outputDir;
+}
+
 // Build process
-async function build() {
+async function build(target) {
+  const targetManifest = target === 'firefox' ? 'manifest-firefox.json' : 'manifest.json';
+  
+  console.log(`Building for ${target || 'default'} (manifest: ${targetManifest})...`);
+  
+  // For Firefox, swap manifests
+  if (target === 'firefox') {
+    if (!fs.existsSync(path.join(__dirname, 'manifest-firefox.json'))) {
+      console.error('manifest-firefox.json not found!');
+      process.exit(1);
+    }
+    // Backup current manifest and swap
+    fs.copyFileSync(path.join(__dirname, 'manifest.json'), path.join(__dirname, 'manifest-chrome.bak'));
+    fs.copyFileSync(path.join(__dirname, 'manifest-firefox.json'), path.join(__dirname, 'manifest.json'));
+  }
+  
   console.log('Validating file structure...');
-  if (!validateFiles()) {
+  if (!validateFiles(targetManifest)) {
     console.error('File validation failed. Please fix the issues above.');
     process.exit(1);
   }
@@ -94,9 +132,29 @@ async function build() {
   console.log('Cleaning files...');
   cleanBOMFromFiles();
   
+  const manifestBak = path.join(__dirname, 'manifest-chrome.bak');
+  
   console.log('Building extension...');
   try {
-    execSync('npx web-ext build --overwrite-dest', { stdio: 'inherit' });
+    const defaultArtifactsDir = path.join(__dirname, 'web-ext-artifacts');
+    const buildOpts = {
+      sourceDir: __dirname,
+      artifactsDir: defaultArtifactsDir,
+      overwriteDest: true,
+    };
+    
+    if (target === 'chrome') {
+      buildOpts.filename = 'youtube_live_chat_overlay-chrome-{version}.zip';
+    } else if (target === 'firefox') {
+      buildOpts.filename = 'youtube_live_chat_overlay-firefox-{version}.zip';
+    }
+    
+    await webExt.cmd.build(buildOpts, { shouldExitProgram: false });
+    if (target === 'chrome' || target === 'default') {
+      const unpackedDir = buildChromeUnpacked();
+      console.log(`Chrome unpacked extension ready: ${unpackedDir}`);
+    }
+    
     console.log(`\n✅ Build successful! Extension file created in web-ext-artifacts folder.`);
     
     // Show the file size to verify it's not corrupted
@@ -114,15 +172,36 @@ async function build() {
       const fileSizeKB = (stats.size / 1024).toFixed(2);
       console.log(`File: ${latestFile} (${fileSizeKB} KB)`);
       
-      // Check if file size is too small (likely corrupted)
       if (stats.size < 5000) {
         console.warn('⚠️ Warning: The build file is very small, which might indicate a problem.');
       }
     }
   } catch (error) {
     console.error('Build failed:', error.message);
+    throw error; // Re-throw so cleanup happens in outer try/finally
+  } finally {
+    // Restore Chrome manifest if we swapped
+    restoreManifest(target, manifestBak);
+  }
+}
+
+function restoreManifest(target, manifestBak) {
+  if (target === 'firefox' && fs.existsSync(manifestBak)) {
+    const srcManifest = path.join(__dirname, 'manifest.json');
+    fs.copyFileSync(manifestBak, srcManifest);
+    fs.unlinkSync(manifestBak);
+    console.log('Restored Chrome manifest.');
+  }
+}
+
+async function run() {
+  const target = process.argv[2] || 'default';
+  try {
+    await build(target);
+  } catch (error) {
     process.exit(1);
   }
 }
 
-build();
+run();
+
