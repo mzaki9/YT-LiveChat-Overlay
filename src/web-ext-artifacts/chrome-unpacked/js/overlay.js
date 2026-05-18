@@ -6,6 +6,8 @@ let isOverlayVisible = false;
 let activeChatIframe = null;
 let activeChatSourceKind = null;
 let borrowedIframeRestoreTarget = null;
+const pendingNativeHostRestoreIframes = new Set();
+let pendingNativeHostRestoreObserver = null;
 
 function createToggleButton(videoPlayer, toggleCallback) {
   const toggleButton = document.createElement("button");
@@ -99,6 +101,11 @@ function createChatOverlay(videoPlayer) {
   iframeContainer.id = "chat-iframe-container";
   overlayChatContainer.appendChild(iframeContainer);
 
+  const debugPanel = document.createElement("div");
+  debugPanel.id = "yt-overlay-debug-panel";
+  debugPanel.style.display = localStorage.getItem("chatOverlayDebug") === "true" ? "block" : "none";
+  overlayChatContainer.appendChild(debugPanel);
+
   const resizeHandle = document.createElement("div");
   resizeHandle.id = "resize-handle";
   overlayChatContainer.appendChild(resizeHandle);
@@ -151,17 +158,61 @@ function createManagedLiveIframe(source) {
   iframe.src = source.url;
   iframe.setAttribute("data-yt-overlay-chat", "true");
   iframe.setAttribute("data-yt-overlay-owned", "true");
+  iframe.setAttribute("data-yt-overlay-source", "live_direct");
   iframe.setAttribute("allowtransparency", "true");
+  iframe.addEventListener("load", () => {
+    debugState("managed live iframe load", {
+      src: iframe.getAttribute("src") || iframe.src || "",
+      href: getIframeHref(iframe),
+      parent: iframe.parentElement?.id || iframe.parentElement?.tagName || "none",
+    });
+  });
+  iframe.addEventListener("error", () => {
+    debugState("managed live iframe error", {
+      src: iframe.getAttribute("src") || iframe.src || "",
+      href: getIframeHref(iframe),
+    });
+  });
   return iframe;
+}
+
+function isManagedLiveIframe(iframe) {
+  return iframe?.getAttribute("data-yt-overlay-owned") === "true" &&
+    iframe?.getAttribute("data-yt-overlay-source") === "live_direct";
+}
+
+function getReusableLiveIframe(source) {
+  if (!isManagedLiveIframe(activeChatIframe)) return null;
+  const href = getIframeHref(activeChatIframe);
+  const src = activeChatIframe.getAttribute("src") || activeChatIframe.src || "";
+  if (href === source.url || src === source.url) return activeChatIframe;
+  return null;
 }
 
 function applyChatIframeStyle(iframe) {
   iframe.style.width = "100%";
   iframe.style.height = "100%";
-  iframe.style.border = "0";
+  iframe.style.maxWidth = "100%";
+  iframe.style.borderStyle = "none";
+  iframe.style.borderWidth = "0";
   iframe.style.outline = "none";
   iframe.style.display = "block";
+  iframe.style.position = "relative";
+  iframe.style.zIndex = "1";
   iframe.style.backgroundColor = "transparent";
+  iframe.setAttribute("allowtransparency", "true");
+}
+
+function syncBorrowedIframeSrcWithDocumentHref(iframe) {
+  let docHref = "";
+  try {
+    docHref = iframe.contentDocument?.location?.href || "";
+  } catch {}
+  if (!docHref || docHref.includes("about:blank")) return;
+
+  const currentSrc = iframe.getAttribute("src") || iframe.src || "";
+  if (currentSrc && !currentSrc.includes("about:blank")) return;
+  iframe.src = docHref;
 }
 
 function rememberBorrowedIframe(iframe, container) {
@@ -170,16 +221,22 @@ function rememberBorrowedIframe(iframe, container) {
   iframe.parentNode.insertBefore(placeholder, iframe);
   borrowedIframeRestoreTarget = {
     parent: placeholder.parentNode,
+    nextSibling: iframe.nextSibling,
     placeholder,
     style: {
       width: iframe.style.width,
       height: iframe.style.height,
-      border: iframe.style.border,
+      maxWidth: iframe.style.maxWidth,
+      borderStyle: iframe.style.borderStyle,
+      borderWidth: iframe.style.borderWidth,
       outline: iframe.style.outline,
       display: iframe.style.display,
+      position: iframe.style.position,
+      zIndex: iframe.style.zIndex,
       backgroundColor: iframe.style.backgroundColor,
     },
   };
+  syncBorrowedIframeSrcWithDocumentHref(iframe);
 }
 
 function restoreBorrowedIframe(iframe) {
@@ -187,19 +244,27 @@ function restoreBorrowedIframe(iframe) {
   const target = borrowedIframeRestoreTarget;
   iframe.style.width = target.style.width;
   iframe.style.height = target.style.height;
-  iframe.style.border = target.style.border;
+  iframe.style.maxWidth = target.style.maxWidth;
+  iframe.style.borderStyle = target.style.borderStyle;
+  iframe.style.borderWidth = target.style.borderWidth;
   iframe.style.outline = target.style.outline;
   iframe.style.display = target.style.display;
+  iframe.style.position = target.style.position;
+  iframe.style.zIndex = target.style.zIndex;
   iframe.style.backgroundColor = target.style.backgroundColor;
 
   if (target.placeholder?.parentNode) {
-    target.placeholder.parentNode.insertBefore(iframe, target.placeholder);
+    target.placeholder.parentNode.insertBefore(iframe, target.placeholder.nextSibling);
     target.placeholder.remove();
     borrowedIframeRestoreTarget = null;
     return true;
   }
   if (target.parent?.isConnected) {
-    target.parent.appendChild(iframe);
+    if (target.nextSibling && target.parent.contains(target.nextSibling)) {
+      target.parent.insertBefore(iframe, target.nextSibling);
+    } else {
+      target.parent.appendChild(iframe);
+    }
     borrowedIframeRestoreTarget = null;
     return true;
   }
@@ -207,13 +272,92 @@ function restoreBorrowedIframe(iframe) {
   return false;
 }
 
-function attachChatSource(iframeContainer) {
-  const mode = detectChatMode(activeChatIframe);
-  const source = mode === "archive" ? resolveArchiveChatSource(activeChatIframe) : resolveLiveChatSource(activeChatIframe);
-  if (!source) return false;
+function cleanupNativeRestoreObserverIfIdle() {
+  if (pendingNativeHostRestoreIframes.size > 0) return;
+  pendingNativeHostRestoreObserver?.disconnect();
+  pendingNativeHostRestoreObserver = null;
+}
 
-  const nextIframe = source.kind === "archive_borrow" ? source.iframe : createManagedLiveIframe(source);
-  if (activeChatIframe === nextIframe && nextIframe.parentElement === iframeContainer) return true;
+function tryRestorePendingNativeIframes() {
+  if (pendingNativeHostRestoreIframes.size === 0) {
+    cleanupNativeRestoreObserverIfIdle();
+    return;
+  }
+
+  const host = document.querySelector("ytd-live-chat-frame");
+  if (!host) return;
+
+  for (const iframe of Array.from(pendingNativeHostRestoreIframes)) {
+    host.insertBefore(iframe, host.firstChild);
+    pendingNativeHostRestoreIframes.delete(iframe);
+  }
+  cleanupNativeRestoreObserverIfIdle();
+}
+
+function queueRestoreToNativeHost(iframe) {
+  pendingNativeHostRestoreIframes.add(iframe);
+  iframe.remove();
+  if (!pendingNativeHostRestoreObserver && document.body) {
+    pendingNativeHostRestoreObserver = new MutationObserver(tryRestorePendingNativeIframes);
+    pendingNativeHostRestoreObserver.observe(document.body, { childList: true, subtree: true });
+  }
+  tryRestorePendingNativeIframes();
+}
+
+function restoreIframeToNativeHost(iframe) {
+  const host = document.querySelector("ytd-live-chat-frame");
+  if (!host) return false;
+  if (iframe.parentElement === host) return true;
+  host.insertBefore(iframe, host.firstChild);
+  return true;
+}
+
+function attachChatSource(iframeContainer) {
+  if (!iframeContainer || !iframeContainer.isConnected) {
+    debugState("attachChatSource:detached container", {
+      hasContainer: Boolean(iframeContainer),
+      containerConnected: Boolean(iframeContainer?.isConnected),
+    });
+    return false;
+  }
+
+  const duplicateIframes = iframeContainer.querySelectorAll('iframe[data-yt-overlay-chat="true"]');
+  duplicateIframes.forEach((iframe) => {
+    if (iframe !== activeChatIframe) iframe.remove();
+  });
+
+  const mode = detectChatMode(activeChatIframe);
+  debugState("attachChatSource:start", {
+    mode,
+    videoId: getVideoId(),
+    activeHref: getIframeHref(activeChatIframe),
+    nativeHref: getIframeHref(getLiveChatIframe()),
+    containerConnected: iframeContainer?.isConnected,
+  });
+  if (mode === "archive" && !resolveArchiveChatSource(activeChatIframe)) {
+    debugState("attachChatSource:openArchiveNativeChatPanel", {});
+    openArchiveNativeChatPanel();
+  }
+  const source = mode === "archive" ? resolveArchiveChatSource(activeChatIframe) : resolveLiveChatSource(activeChatIframe);
+  if (!source) {
+    debugState("attachChatSource:no source", {
+      mode,
+      videoId: getVideoId(),
+      nativeHref: getIframeHref(getLiveChatIframe()),
+    });
+    return false;
+  }
+
+  debugState("attachChatSource:source", {
+    kind: source.kind,
+    url: source.url || getIframeHref(source.iframe),
+  });
+
+  const nextIframe = source.kind === "archive_borrow" ? source.iframe : (getReusableLiveIframe(source) || createManagedLiveIframe(source));
+  if (activeChatIframe === nextIframe && nextIframe.parentElement === iframeContainer) {
+    debugState("attachChatSource:reuse", { href: getIframeHref(nextIframe) });
+    return true;
+  }
 
   detachChatSource();
   activeChatIframe = nextIframe;
@@ -226,7 +370,19 @@ function attachChatSource(iframeContainer) {
 
   applyChatIframeStyle(activeChatIframe);
   iframeContainer.appendChild(activeChatIframe);
+  debugState("attachChatSource:appended", {
+    kind: activeChatSourceKind,
+    childCount: iframeContainer.childElementCount,
+    src: activeChatIframe.getAttribute("src") || activeChatIframe.src || "",
+    href: getIframeHref(activeChatIframe),
+    connected: activeChatIframe.isConnected,
+  });
   return true;
+}
+
+function isActiveChatIframeLoaded() {
+  const href = getIframeHref(activeChatIframe);
+  return Boolean(activeChatIframe?.isConnected && href && !href.includes("about:blank"));
 }
 
 function detachChatSource() {
@@ -234,7 +390,8 @@ function detachChatSource() {
 
   activeChatIframe.removeAttribute("data-yt-overlay-chat");
   if (activeChatSourceKind === "archive_borrow") {
-    restoreBorrowedIframe(activeChatIframe);
+    const restored = restoreBorrowedIframe(activeChatIframe) || restoreIframeToNativeHost(activeChatIframe);
+    if (!restored) queueRestoreToNativeHost(activeChatIframe);
   } else {
     activeChatIframe.remove();
   }
@@ -245,6 +402,7 @@ function detachChatSource() {
 
 function toggleOverlayChat(overlayChatContainer, iframeContainer, toggleButton) {
   isOverlayVisible = !isOverlayVisible;
+  debugState("toggleOverlayChat", { visible: isOverlayVisible, videoId: getVideoId(), mode: detectChatMode(activeChatIframe) });
   overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
   overlayChatContainer.classList.toggle("show", isOverlayVisible);
   toggleButton.title = isOverlayVisible ? "Hide Chat" : "Show Chat";
@@ -257,6 +415,7 @@ function toggleOverlayChat(overlayChatContainer, iframeContainer, toggleButton) 
   }
 
   localStorage.setItem("youtubeOverlayVisible", isOverlayVisible);
+  localStorage.setItem("overlayVisible", isOverlayVisible);
 }
 
 function initializeOverlayState(overlayChatContainer) {
@@ -268,9 +427,9 @@ function initializeOverlayState(overlayChatContainer) {
 function cleanupOverlay() {
   detachChatSource();
 
-  const existingOverlay = document.getElementById("overlay-chat-container");
-  const existingToggleButton = document.getElementById("toggle-chat-overlay");
-  if (existingOverlay) existingOverlay.remove();
-  if (existingToggleButton) existingToggleButton.remove();
+  const existingOverlays = document.querySelectorAll("#overlay-chat-container");
+  const existingToggleButtons = document.querySelectorAll("#toggle-chat-overlay");
+  existingOverlays.forEach((overlay) => overlay.remove());
+  existingToggleButtons.forEach((button) => button.remove());
   isOverlayVisible = false;
 }

@@ -82,13 +82,12 @@ function copyFileToDir(relativePath, outputDir) {
   fs.copyFileSync(source, destination);
 }
 
-function buildChromeUnpacked() {
-  const outputDir = path.join(__dirname, 'web-ext-artifacts', 'chrome-unpacked');
+function buildUnpacked(target) {
+  const outputDir = path.join(__dirname, 'web-ext-artifacts', target === 'firefox' ? 'firefox-unpacked' : 'chrome-unpacked');
   fs.rmSync(outputDir, { recursive: true, force: true });
   fs.mkdirSync(outputDir, { recursive: true });
 
   const files = [
-    'manifest.json',
     'icon.png',
     'css/styles.css',
     'js/background.js',
@@ -98,6 +97,12 @@ function buildChromeUnpacked() {
     'js/ui.js',
     'js/utils.js'
   ];
+
+  const manifestSource = target === 'firefox' ? 'manifest-firefox.json' : 'manifest.json';
+  copyFileToDir(manifestSource, outputDir);
+  if (manifestSource !== 'manifest.json') {
+    fs.renameSync(path.join(outputDir, manifestSource), path.join(outputDir, 'manifest.json'));
+  }
 
   for (const file of files) {
     copyFileToDir(file, outputDir);
@@ -146,13 +151,13 @@ async function build(target) {
     if (target === 'chrome') {
       buildOpts.filename = 'youtube_live_chat_overlay-chrome-{version}.zip';
     } else if (target === 'firefox') {
-      buildOpts.filename = 'youtube_live_chat_overlay-firefox-{version}.zip';
+      buildOpts.filename = 'youtube_live_chat_overlay-firefox-{version}-test6.zip';
     }
     
     await webExt.cmd.build(buildOpts, { shouldExitProgram: false });
-    if (target === 'chrome' || target === 'default') {
-      const unpackedDir = buildChromeUnpacked();
-      console.log(`Chrome unpacked extension ready: ${unpackedDir}`);
+    if (target === 'chrome' || target === 'default' || target === 'firefox') {
+      const unpackedDir = buildUnpacked(target);
+      console.log(`${target === 'firefox' ? 'Firefox' : 'Chrome'} unpacked extension ready: ${unpackedDir}`);
     }
     
     console.log(`\n✅ Build successful! Extension file created in web-ext-artifacts folder.`);
