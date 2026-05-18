@@ -30,33 +30,9 @@ function debounce(func, wait) {
   }
   
  
-  const isDebug = () => localStorage.getItem('chatOverlayDebug') === 'true';
+  function log() {}
 
-  function log(message) {
-    if (isDebug()) console.log(`[YT Chat Overlay] ${message}`);
-  }
-
-  function debugState(label, details = {}) {
-    if (!isDebug()) return;
-    const safeDetails = {};
-    for (const key of Object.keys(details)) {
-      try {
-        const value = details[key];
-        safeDetails[key] = value instanceof Element ? `<${value.tagName.toLowerCase()} id="${value.id}" class="${value.className}">` : value;
-      } catch (error) {
-        safeDetails[key] = `[unreadable: ${error.message}]`;
-      }
-    }
-    console.log(`[YT Chat Overlay] ${label}`, safeDetails);
-    const debugPanel = document.getElementById('yt-overlay-debug-panel');
-    if (debugPanel) {
-      const line = document.createElement('div');
-      line.textContent = `${new Date().toLocaleTimeString()} ${label}: ${JSON.stringify(safeDetails)}`;
-      debugPanel.appendChild(line);
-      while (debugPanel.childElementCount > 18) debugPanel.firstChild?.remove();
-      debugPanel.scrollTop = debugPanel.scrollHeight;
-    }
-  }
+  function debugState() {}
 
   function getLiveChatIframe() {
     return document.querySelector('#chatframe') ||

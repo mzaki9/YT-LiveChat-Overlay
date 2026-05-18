@@ -101,11 +101,6 @@ function createChatOverlay(videoPlayer) {
   iframeContainer.id = "chat-iframe-container";
   overlayChatContainer.appendChild(iframeContainer);
 
-  const debugPanel = document.createElement("div");
-  debugPanel.id = "yt-overlay-debug-panel";
-  debugPanel.style.display = localStorage.getItem("chatOverlayDebug") === "true" ? "block" : "none";
-  overlayChatContainer.appendChild(debugPanel);
-
   const resizeHandle = document.createElement("div");
   resizeHandle.id = "resize-handle";
   overlayChatContainer.appendChild(resizeHandle);

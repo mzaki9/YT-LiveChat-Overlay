@@ -151,7 +151,7 @@ async function build(target) {
     if (target === 'chrome') {
       buildOpts.filename = 'youtube_live_chat_overlay-chrome-{version}.zip';
     } else if (target === 'firefox') {
-      buildOpts.filename = 'youtube_live_chat_overlay-firefox-{version}-test6.zip';
+      buildOpts.filename = 'youtube_live_chat_overlay-firefox-{version}.zip';
     }
     
     await webExt.cmd.build(buildOpts, { shouldExitProgram: false });

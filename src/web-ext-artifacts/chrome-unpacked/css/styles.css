@@ -92,24 +92,6 @@
   background: transparent;
 }
 
-#yt-overlay-debug-panel {
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 18px;
-  max-height: 42%;
-  overflow: auto;
-  z-index: 2147483650;
-  padding: 6px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.82);
-  color: #8cff8c;
-  font: 11px/1.35 monospace;
-  pointer-events: auto;
-  white-space: normal;
-}
-
-
 #chat-messages-container {
   height: calc(100% - 24px); 
   overflow-y: auto;
