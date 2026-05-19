@@ -24,9 +24,12 @@ function makeDraggable(element, dragHandle) {
   let pendingFrame = 0;
   let targetLeft = 0;
   let targetTop = 0;
+  let activePointerId = null;
 
-  dragHandle.addEventListener("mousedown", (e) => {
+  dragHandle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
+    dragHandle.setPointerCapture(e.pointerId);
+    activePointerId = e.pointerId;
     isDragging = true;
     startClientX = e.clientX;
     startClientY = e.clientY;
@@ -39,9 +42,32 @@ function makeDraggable(element, dragHandle) {
     element.style.bottom = "auto";
     element.style.transform = "none";
     element.classList.add("dragging");
-    document.addEventListener("mousemove", onDrag);
-    document.addEventListener("mouseup", stopDrag);
+    disableIframePointerEvents(true);
   });
+
+  dragHandle.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    onDrag(e);
+  });
+
+  dragHandle.addEventListener("pointerup", (e) => {
+    stopDrag(e);
+  });
+
+  dragHandle.addEventListener("pointercancel", (e) => {
+    stopDrag(e);
+  });
+
+  dragHandle.addEventListener("lostpointercapture", (e) => {
+    stopDrag(e);
+  });
+
+  function disableIframePointerEvents(disable) {
+    const iframes = element.querySelectorAll("iframe");
+    iframes.forEach((iframe) => {
+      iframe.style.pointerEvents = disable ? "none" : "auto";
+    });
+  }
 
   function onDrag(e) {
     if (!isDragging) return;
@@ -65,15 +91,16 @@ function makeDraggable(element, dragHandle) {
     });
   }
 
-  function stopDrag() {
+  function stopDrag(e) {
+    if (!isDragging) return;
     isDragging = false;
-    document.removeEventListener("mousemove", onDrag);
-    document.removeEventListener("mouseup", stopDrag);
+    activePointerId = null;
     if (pendingFrame) {
       cancelAnimationFrame(pendingFrame);
       pendingFrame = 0;
     }
     element.classList.remove("dragging");
+    disableIframePointerEvents(false);
     saveContainerPosition(element);
   }
 }
