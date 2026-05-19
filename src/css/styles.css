@@ -16,6 +16,9 @@
 }
 
 #overlay-chat-container {
+  --yt-sys-color-baseline--base-background: transparent;
+  --yt-sys-color-baseline--text-primary: #f1f1f1;
+  --yt-sys-color-baseline--text-secondary: #aaa;
   display: none;
   position: absolute;
   top: 10%;

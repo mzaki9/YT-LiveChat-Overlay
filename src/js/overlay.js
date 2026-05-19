@@ -160,6 +160,7 @@ function createManagedLiveIframe(source) {
   iframe.setAttribute("data-yt-overlay-source", "live_direct");
   iframe.setAttribute("allowtransparency", "true");
   iframe.addEventListener("load", () => {
+    injectChatIframeThemeOverride(iframe);
     debugState("managed live iframe load", {
       src: iframe.getAttribute("src") || iframe.src || "",
       href: getIframeHref(iframe),
@@ -173,6 +174,33 @@ function createManagedLiveIframe(source) {
     });
   });
   return iframe;
+}
+
+function injectChatIframeThemeOverride(iframe) {
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+
+    const existing = doc.getElementById("yt-overlay-theme-override");
+    if (existing) return;
+
+    const style = doc.createElement("style");
+    style.id = "yt-overlay-theme-override";
+    style.textContent = `
+      yt-live-chat-app {
+        --yt-sys-color-baseline--base-background: transparent !important;
+        --yt-sys-color-baseline--text-primary: #f1f1f1 !important;
+        --yt-sys-color-baseline--text-secondary: #aaa !important;
+      }
+      yt-live-chat-renderer,
+      yt-live-chat-item-list-renderer,
+      #item-scroller,
+      #items {
+        background-color: transparent !important;
+      }
+    `;
+    doc.head?.appendChild(style) || doc.documentElement?.appendChild(style);
+  } catch {}
 }
 
 function isManagedLiveIframe(iframe) {
@@ -369,6 +397,7 @@ function attachChatSource(iframeContainer) {
 
   applyChatIframeStyle(activeChatIframe);
   iframeContainer.appendChild(activeChatIframe);
+  injectChatIframeThemeOverride(activeChatIframe);
   debugState("attachChatSource:appended", {
     kind: activeChatSourceKind,
     childCount: iframeContainer.childElementCount,
