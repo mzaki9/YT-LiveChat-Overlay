@@ -18,40 +18,50 @@ function saveContainerPosition(element) {
 // Make an element draggable using the provided drag handle
 function makeDraggable(element, dragHandle) {
   let isDragging = false;
-  let lastX, lastY;
+  let startClientX, startClientY;
+  let startLeft = 0;
+  let startTop = 0;
+  let pendingFrame = 0;
+  let targetLeft = 0;
+  let targetTop = 0;
 
   dragHandle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
     isDragging = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
+    startClientX = e.clientX;
+    startClientY = e.clientY;
+    const rect = element.getBoundingClientRect();
+    startLeft = rect.left;
+    startTop = rect.top;
+    targetLeft = startLeft;
+    targetTop = startTop;
+    element.style.right = "auto";
+    element.style.bottom = "auto";
+    element.style.transform = "none";
+    element.classList.add("dragging");
     document.addEventListener("mousemove", onDrag);
     document.addEventListener("mouseup", stopDrag);
   });
 
   function onDrag(e) {
     if (!isDragging) return;
-    const deltaX = e.clientX - lastX;
-    const deltaY = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    
-    // Calculate new position
-    let newLeft = element.offsetLeft + deltaX;
-    let newTop = element.offsetTop + deltaY;
-    
-    // Get viewport and element dimensions
+
+    targetLeft = startLeft + (e.clientX - startClientX);
+    targetTop = startTop + (e.clientY - startClientY);
+
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const elementWidth = element.offsetWidth;
     const elementHeight = element.offsetHeight;
-    
-    // Constrain to viewport bounds
-    newLeft = Math.max(0, Math.min(newLeft, viewportWidth - elementWidth));
-    newTop = Math.max(0, Math.min(newTop, viewportHeight - elementHeight));
-    
-    requestAnimationFrame(() => {
-      element.style.top = `${newTop}px`;
-      element.style.left = `${newLeft}px`;
+
+    targetLeft = Math.max(0, Math.min(targetLeft, viewportWidth - elementWidth));
+    targetTop = Math.max(0, Math.min(targetTop, viewportHeight - elementHeight));
+
+    if (pendingFrame) return;
+    pendingFrame = requestAnimationFrame(() => {
+      pendingFrame = 0;
+      element.style.left = `${targetLeft}px`;
+      element.style.top = `${targetTop}px`;
     });
   }
 
@@ -59,6 +69,11 @@ function makeDraggable(element, dragHandle) {
     isDragging = false;
     document.removeEventListener("mousemove", onDrag);
     document.removeEventListener("mouseup", stopDrag);
+    if (pendingFrame) {
+      cancelAnimationFrame(pendingFrame);
+      pendingFrame = 0;
+    }
+    element.classList.remove("dragging");
     saveContainerPosition(element);
   }
 }

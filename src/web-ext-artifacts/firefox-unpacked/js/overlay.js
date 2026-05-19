@@ -136,13 +136,17 @@ function restoreContainerPosition(container) {
     const height = (parseFloat(savedHeight) / 100) * viewportHeight;
     container.style.left = `${Math.max(0, Math.min(left, viewportWidth - 200))}px`;
     container.style.top = `${Math.max(0, Math.min(top, viewportHeight - 150))}px`;
+    container.style.right = "auto";
+    container.style.bottom = "auto";
     container.style.width = `${Math.max(200, Math.min(width, viewportWidth * 0.9))}px`;
     container.style.height = `${Math.max(150, Math.min(height, viewportHeight * 0.9))}px`;
     return;
   }
 
-  container.style.right = "5%";
+  container.style.left = "70%";
   container.style.top = "10%";
+  container.style.right = "auto";
+  container.style.bottom = "auto";
   container.style.width = "25%";
   container.style.height = "80%";
 }

@@ -19,7 +19,7 @@
   display: none;
   position: absolute;
   top: 10%;
-  right: 5%;
+  left: 70%;
   width: 25%;
   height: 80%;
   background-color: rgba(0, 0, 0, 0.5);
@@ -30,6 +30,7 @@
   backdrop-filter: blur(8px);
   animation: fadeOut 0.1s ease forwards;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  will-change: transform, left, top;
 }
 
 #overlay-chat-container.show {
@@ -69,6 +70,14 @@
   padding: 0 10px;
   box-sizing: border-box;
   color: white;
+  user-select: none;
+  cursor: grab;
+}
+
+#overlay-chat-container.dragging {
+  user-select: none;
+  transition: none !important;
+  cursor: grabbing;
 }
 
 #drag-title {
