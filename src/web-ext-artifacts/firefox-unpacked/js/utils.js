@@ -29,10 +29,43 @@ function debounce(func, wait) {
     };
   }
   
- 
   function log() {}
 
   function debugState() {}
+
+  function createSvgElement(name, attrs = {}) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+    for (const [k, v] of Object.entries(attrs)) {
+      el.setAttribute(k, v);
+    }
+    return el;
+  }
+
+  function getVideoPlayer() {
+    return document.querySelector('.html5-video-player') ||
+      document.querySelector('#movie_player') ||
+      document.querySelector('ytd-player') ||
+      document.querySelector('.ytd-player');
+  }
+
+  function isYouTubeFullscreen() {
+    const player = getVideoPlayer();
+    const isPlayerFs = Boolean(player?.classList?.contains('ytp-fullscreen') || document.querySelector('.html5-video-player.ytp-fullscreen, #movie_player.ytp-fullscreen'));
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+    const isDocFs = Boolean(fsEl && player && (player === fsEl || player.contains(fsEl) || fsEl.contains(player)));
+    return isPlayerFs || isDocFs;
+  }
+
+  function isYouTubeDarkMode() {
+    try {
+      return document.documentElement.hasAttribute('dark') ||
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        window.location.search.includes('dark_theme=true') ||
+        Boolean(window.matchMedia?.('(prefers-color-scheme: dark)')?.matches);
+    } catch {
+      return false;
+    }
+  }
 
   function getLiveChatIframe() {
     return document.querySelector('#chatframe') ||
@@ -337,10 +370,14 @@ function debounce(func, wait) {
   function resolveLiveChatSource(currentIframe) {
     const videoId = getVideoId();
     if (!videoId) return null;
+    if (!isYouTubeLiveNow()) return null;
     const nativeIframe = getLiveChatIframe();
     if (nativeIframe && isReplayChatIframe(nativeIframe)) return null;
     const url = new URL('https://www.youtube.com/live_chat');
     url.searchParams.set('v', videoId);
+    if (isYouTubeDarkMode()) {
+      url.searchParams.set('dark_theme', 'true');
+    }
     return { kind: 'live_direct', url: url.toString(), videoId };
   }
 
@@ -362,15 +399,15 @@ function debounce(func, wait) {
       if (isReplayChatIframe(iframe)) return 'archive';
       if (isLiveChatIframe(iframe) || iframe.getAttribute('data-yt-overlay-owned') === 'true') return 'live';
     }
-    if (isYouTubeLiveNow()) return 'live';
     if (resolveArchiveChatSource(currentIframe)) return 'archive';
-    if (resolveLiveChatSource(currentIframe)) return 'live';
+    if (isYouTubeLiveNow()) return 'live';
     if (hasArchiveNativeOpenControl()) {
       const isLive = getMoviePlayerIsLive();
       if (isLive === false && hasArchiveReplaySignal()) return 'archive';
-      return 'live';
+      if (isLive === true) return 'live';
     }
-    if (videoId) return 'live';
+    if (hasArchiveReplaySignal()) return 'archive';
+    if (resolveLiveChatSource(currentIframe)) return 'live';
     return 'none';
   }
 

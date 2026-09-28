@@ -84,10 +84,14 @@ function makeDraggable(element, dragHandle) {
     targetTop = Math.max(0, Math.min(targetTop, viewportHeight - elementHeight));
 
     if (pendingFrame) return;
+    const frameStart = performance.now();
     pendingFrame = requestAnimationFrame(() => {
       pendingFrame = 0;
       element.style.left = `${targetLeft}px`;
       element.style.top = `${targetTop}px`;
+      if (typeof recordAnimationFrameTime === "function") {
+        recordAnimationFrameTime(performance.now() - frameStart);
+      }
     });
   }
 
@@ -176,10 +180,14 @@ function makeResizable(element, resizer) {
     newHeight = Math.min(newHeight, viewportHeight - elementTop - PADDING);
 
     if (pendingFrame) return;
+    const frameStart = performance.now();
     pendingFrame = requestAnimationFrame(() => {
       pendingFrame = 0;
       element.style.width = `${newWidth}px`;
       element.style.height = `${newHeight}px`;
+      if (typeof recordAnimationFrameTime === "function") {
+        recordAnimationFrameTime(performance.now() - frameStart);
+      }
     });
   }
 

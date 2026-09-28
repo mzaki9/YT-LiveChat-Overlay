@@ -163,8 +163,7 @@
 
 
 #toggle-chat-overlay svg {
-  fill: white;
-  stroke: white;
+  color: white;
 }
 
 .chat-message {

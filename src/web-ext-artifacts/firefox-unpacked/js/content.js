@@ -36,7 +36,10 @@ function getVideoPlayer() {
 
 function isYouTubeFullscreen() {
   const player = getVideoPlayer();
-  return Boolean(player?.classList?.contains('ytp-fullscreen') || document.querySelector('.html5-video-player.ytp-fullscreen, #movie_player.ytp-fullscreen'));
+  const isPlayerFs = Boolean(player?.classList?.contains('ytp-fullscreen') || document.querySelector('.html5-video-player.ytp-fullscreen, #movie_player.ytp-fullscreen'));
+  const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+  const isDocFs = Boolean(fsEl && player && (player === fsEl || player.contains(fsEl) || fsEl.contains(player)));
+  return isPlayerFs || isDocFs;
 }
 
 function removeDuplicateOverlays() {

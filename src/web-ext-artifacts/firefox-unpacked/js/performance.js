@@ -1,18 +1,20 @@
 /**
- * Performance monitoring and adaptive updates
+ * Performance monitoring and adaptive metrics for YouTube Live Chat Overlay
  */
 
-// Performance monitoring variables
 let lastUpdateTime = 0;
 let updateTimes = [];
 let avgUpdateTime = 0;
-let adaptiveInterval = 600; // Start with 600ms
+let adaptiveInterval = 600;
 let frameDropCount = 0;
 
-// Adaptive interval configuration
-const MIN_INTERVAL = 400;  // Minimum 400ms between updates
-const MAX_INTERVAL = 1200; // Maximum 1.2s between updates
-const TARGET_UPDATE_TIME = 16; // Target 16ms update time (60fps budget)
+let lastIframeLoadDuration = 0;
+let frameRenderTimes = [];
+let totalFramesTracked = 0;
+
+const MIN_INTERVAL = 400;
+const MAX_INTERVAL = 1200;
+const TARGET_UPDATE_TIME = 16.67; // 60fps budget (16.67ms)
 
 /**
  * Measure and adapt update performance
@@ -25,18 +27,12 @@ function measureUpdatePerformance(updateFunction) {
     
     const updateTime = endTime - startTime;
     updateTimes.push(updateTime);
-    
-    // Keep only last 10 measurements for rolling average
-    if (updateTimes.length > 10) {
+    if (updateTimes.length > 20) {
       updateTimes.shift();
     }
     
-    // Calculate average update time
     avgUpdateTime = updateTimes.reduce((sum, time) => sum + time, 0) / updateTimes.length;
-    
-    // Adapt interval based on performance
     adaptUpdateInterval();
-    
     return result;
   };
 }
@@ -45,20 +41,37 @@ function measureUpdatePerformance(updateFunction) {
  * Adapt update interval based on performance metrics
  */
 function adaptUpdateInterval() {
-  // If updates are taking too long, increase interval
   if (avgUpdateTime > TARGET_UPDATE_TIME) {
     adaptiveInterval = Math.min(MAX_INTERVAL, adaptiveInterval + 50);
     frameDropCount++;
-  } 
-  // If updates are fast and we have headroom, decrease interval
-  else if (avgUpdateTime < TARGET_UPDATE_TIME * 0.5 && frameDropCount === 0) {
+  } else if (avgUpdateTime < TARGET_UPDATE_TIME * 0.5 && frameDropCount === 0) {
     adaptiveInterval = Math.max(MIN_INTERVAL, adaptiveInterval - 25);
   }
   
-  // Reset frame drop count periodically
   if (frameDropCount > 5) {
     frameDropCount = Math.max(0, frameDropCount - 1);
   }
+}
+
+/**
+ * Track an animation frame execution time
+ */
+function recordAnimationFrameTime(durationMs) {
+  totalFramesTracked++;
+  frameRenderTimes.push(durationMs);
+  if (frameRenderTimes.length > 30) {
+    frameRenderTimes.shift();
+  }
+  if (durationMs > TARGET_UPDATE_TIME * 1.5) {
+    frameDropCount++;
+  }
+}
+
+/**
+ * Record iframe attach-to-load duration
+ */
+function recordIframeLoadDuration(durationMs) {
+  lastIframeLoadDuration = durationMs;
 }
 
 /**
@@ -73,19 +86,39 @@ function getAdaptiveInterval() {
  */
 function resetPerformanceMetrics() {
   updateTimes = [];
+  frameRenderTimes = [];
   avgUpdateTime = 0;
   adaptiveInterval = 600;
   frameDropCount = 0;
+  totalFramesTracked = 0;
 }
 
 /**
  * Get performance stats
  */
 function getPerformanceStats() {
+  const avgFrameDuration = frameRenderTimes.length > 0
+    ? (frameRenderTimes.reduce((sum, t) => sum + t, 0) / frameRenderTimes.length)
+    : 0;
+  const estimatedFps = avgFrameDuration > 0
+    ? Math.min(60, Math.round(1000 / avgFrameDuration))
+    : 60;
+
   return {
-    avgUpdateTime: avgUpdateTime.toFixed(2),
+    avgUpdateTime: Number(avgUpdateTime.toFixed(2)),
+    avgFrameDuration: Number(avgFrameDuration.toFixed(2)),
+    estimatedFps,
     adaptiveInterval,
     frameDropCount,
+    totalFramesTracked,
+    lastIframeLoadDurationMs: Number(lastIframeLoadDuration.toFixed(2)),
     lastMeasurements: updateTimes.slice(-5)
   };
 }
+
+globalThis.__ytOverlayPerf = {
+  getStats: getPerformanceStats,
+  recordFrame: recordAnimationFrameTime,
+  recordIframeLoad: recordIframeLoadDuration,
+  reset: resetPerformanceMetrics
+};
