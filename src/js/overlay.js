@@ -653,6 +653,12 @@ function restoreIframeToNativeHost(iframe) {
   return true;
 }
 
+function shouldUpgradeToNativeChat() {
+  if (!isOverlayVisible) return false;
+  if (activeChatSourceKind !== "live_direct") return false;
+  return Boolean(findNativeLiveChatIframe(activeChatIframe));
+}
+
 function attachChatSource(iframeContainer) {
   if (!iframeContainer || !iframeContainer.isConnected) {
     debugState("attachChatSource:detached container", {
@@ -668,13 +674,13 @@ function attachChatSource(iframeContainer) {
   });
 
   const mode = detectChatMode(activeChatIframe);
-  debugState("attachChatSource:start", {
+  debugState("attachChatSource:start", () => ({
     mode,
     videoId: getVideoId(),
     activeHref: getIframeHref(activeChatIframe),
     nativeHref: getIframeHref(getLiveChatIframe()),
     containerConnected: iframeContainer?.isConnected,
-  });
+  }));
   if (mode === "archive" && !resolveArchiveChatSource(activeChatIframe)) {
     debugState("attachChatSource:openArchiveNativeChatPanel", {});
     openArchiveNativeChatPanel();
@@ -698,7 +704,7 @@ function attachChatSource(iframeContainer) {
     url: source.url || getIframeHref(source.iframe),
   });
 
-  const nextIframe = source.kind === "archive_borrow" ? source.iframe : (getReusableLiveIframe(source) || createManagedLiveIframe(source));
+  const nextIframe = isBorrowedSourceKind(source.kind) ? source.iframe : (getReusableLiveIframe(source) || createManagedLiveIframe(source));
   if (activeChatIframe === nextIframe && nextIframe.parentElement === iframeContainer) {
     debugState("attachChatSource:reuse", { href: getIframeHref(nextIframe) });
     return true;
@@ -709,7 +715,7 @@ function attachChatSource(iframeContainer) {
   activeChatSourceKind = source.kind;
   activeChatIframe.setAttribute("data-yt-overlay-chat", "true");
 
-  if (source.kind === "archive_borrow") {
+  if (isBorrowedSourceKind(source.kind)) {
     rememberBorrowedIframe(activeChatIframe, iframeContainer);
   }
 
@@ -738,7 +744,7 @@ function detachChatSource() {
   if (!activeChatIframe) return;
 
   activeChatIframe.removeAttribute("data-yt-overlay-chat");
-  if (activeChatSourceKind === "archive_borrow") {
+  if (isBorrowedSourceKind(activeChatSourceKind)) {
     const restored = restoreBorrowedIframe(activeChatIframe) || restoreIframeToNativeHost(activeChatIframe);
     if (!restored) queueRestoreToNativeHost(activeChatIframe);
   } else {
@@ -756,7 +762,7 @@ function detachChatSource() {
 
 function toggleOverlayChat(overlayChatContainer, iframeContainer, toggleButton) {
   isOverlayVisible = !isOverlayVisible;
-  debugState("toggleOverlayChat", { visible: isOverlayVisible, videoId: getVideoId(), mode: detectChatMode(activeChatIframe) });
+  debugState("toggleOverlayChat", () => ({ visible: isOverlayVisible, videoId: getVideoId(), mode: detectChatMode(activeChatIframe) }));
   overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
   overlayChatContainer.classList.toggle("show", isOverlayVisible);
   toggleButton.title = isOverlayVisible ? "Hide Chat" : "Show Chat";

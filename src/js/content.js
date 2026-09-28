@@ -144,13 +144,13 @@ function handleFullscreenChange() {
   if (!videoPlayer || !overlayChatContainer || !toggleButton) return;
 
   const canShowToggle = hasChatSource();
-  debugState('handleFullscreenChange', {
+  debugState('handleFullscreenChange', () => ({
     fullscreen: isYouTubeFullscreen(),
     canShowToggle,
     mode: detectChatMode(),
     videoId: getVideoId(),
     savedVisible: getSavedOverlayVisible(),
-  });
+  }));
   toggleButton.style.display = canShowToggle ? 'flex' : 'none';
   toggleButton.classList.toggle('show', canShowToggle);
 
@@ -170,7 +170,7 @@ function handleFullscreenChange() {
 function startAttachRetry() {
   if (attachRetryInterval || !isOverlayVisible || !chatIframeContainer || isActiveChatIframeLoaded()) return;
   const startedAt = Date.now();
-  debugState('startAttachRetry', { videoId: getVideoId(), mode: detectChatMode() });
+  debugState('startAttachRetry', () => ({ videoId: getVideoId(), mode: detectChatMode() }));
   attachRetryInterval = setInterval(() => {
     if (!isOverlayVisible || !chatIframeContainer) {
       clearInterval(attachRetryInterval);
@@ -244,12 +244,12 @@ function injectLiveChatOverlay() {
   removeOverlayDom();
 
   videoPlayer = getVideoPlayer();
-  debugState('injectLiveChatOverlay:start', {
+  debugState('injectLiveChatOverlay:start', () => ({
     hasVideoPlayer: Boolean(videoPlayer),
     videoId: getVideoId(),
     mode: detectChatMode(),
     url: location.href,
-  });
+  }));
   if (!videoPlayer || !getVideoId()) {
     log('Native chat source or video player not ready');
     return false;
@@ -399,7 +399,12 @@ function initializeLifecycle() {
   if (lifecycleInterval) return;
   lifecycleInterval = setInterval(() => {
     setupPlayerFullscreenObserver();
-    if (playerFullscreenObserver && isYouTubeFullscreen()) startInjection();
+    if (!playerFullscreenObserver || !isYouTubeFullscreen()) return;
+    startInjection();
+    // YouTube starts its native chat a moment after the fullscreen swap. Once it
+    // is running, adopt it so only one live chat document stays alive instead of
+    // ours plus the hidden native one (docs/perf-findings.md, finding #1).
+    if (chatIframeContainer && shouldUpgradeToNativeChat()) attachChatSource(chatIframeContainer);
   }, 1000);
 }
 

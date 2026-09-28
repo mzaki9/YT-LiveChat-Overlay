@@ -31,7 +31,42 @@ function debounce(func, wait) {
   
   function log() {}
 
-  function debugState() {}
+  // Never logs unless explicitly enabled, but callers still evaluate their
+  // arguments. Anything expensive (detectChatMode() costs up to ~3 ms) must be
+  // passed as a thunk so a disabled logger costs nothing.
+  let debugLoggingEnabled = false;
+
+  function debugState(message, data) {
+    if (!debugLoggingEnabled) return;
+    try {
+      console.debug('[yt-overlay]', message, typeof data === 'function' ? data() : data);
+    } catch {}
+  }
+
+  // Page-signal verdicts (live vs replay) are derived from data that cannot
+  // change without a navigation: inline <script> text (~1.6 MB on a watch page),
+  // ytInitialPlayerResponse and metadata markup. detectChatMode()/isYouTubeLiveNow()
+  // re-scanned all of it on every call (up to ~3 ms each, ~47x a full
+  // querySelectorAll('*')). Cache briefly, keyed by video + URL so SPA
+  // navigations still force a refresh. See docs/perf-findings.md.
+  const SIGNAL_CACHE_TTL_MS = 1000;
+  let signalCache = null;
+  let signalCacheKey = '';
+  let signalCacheAt = 0;
+
+  function getCachedSignal(name, compute) {
+    const key = `${getVideoId() || ''}@${window.location.href}`;
+    const now = Date.now();
+    if (!signalCache || signalCacheKey !== key || now - signalCacheAt > SIGNAL_CACHE_TTL_MS) {
+      signalCache = {};
+      signalCacheKey = key;
+      signalCacheAt = now;
+    }
+    if (name in signalCache) return signalCache[name];
+    const value = compute();
+    signalCache[name] = value;
+    return value;
+  }
 
   function createSvgElement(name, attrs = {}) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', name);
@@ -169,48 +204,68 @@ function debounce(func, wait) {
   }
 
   function getInlinePlayerResponseLiveState() {
-    const scripts = document.querySelectorAll('script');
-    for (const script of scripts) {
-      const text = script.textContent || '';
-      if (!text.includes('ytInitialPlayerResponse')) continue;
+    return getCachedSignal('inlinePlayerResponseLive', () => {
+      const scripts = document.querySelectorAll('script');
+      for (const script of scripts) {
+        const text = script.textContent || '';
+        if (!text.includes('ytInitialPlayerResponse')) continue;
 
-      const isLiveNowMatch = text.match(/"isLiveNow":(true|false)/);
-      if (isLiveNowMatch?.[1]) return isLiveNowMatch[1] === 'true';
+        const isLiveNowMatch = text.match(/"isLiveNow":(true|false)/);
+        if (isLiveNowMatch?.[1]) return isLiveNowMatch[1] === 'true';
 
-      const viewedLiveMatch = text.match(/"key":"is_viewed_live","value":"(True|False)"/);
-      if (viewedLiveMatch?.[1]) return viewedLiveMatch[1] === 'True';
+        const viewedLiveMatch = text.match(/"key":"is_viewed_live","value":"(True|False)"/);
+        if (viewedLiveMatch?.[1]) return viewedLiveMatch[1] === 'True';
 
-      const isLiveContentMatch = text.match(/"isLiveContent":(true|false)/);
-      if (isLiveContentMatch?.[1]) return isLiveContentMatch[1] === 'true';
-    }
-    return null;
+        const isLiveContentMatch = text.match(/"isLiveContent":(true|false)/);
+        if (isLiveContentMatch?.[1]) return isLiveContentMatch[1] === 'true';
+      }
+      return null;
+    });
+  }
+
+  function hasReplayContinuationSignal() {
+    return getCachedSignal('replayContinuation', () => {
+      try {
+        const scripts = document.querySelectorAll('script');
+        for (const script of scripts) {
+          if ((script.textContent || '').includes('liveChatReplayContinuation')) return true;
+        }
+      } catch {}
+      return false;
+    });
   }
 
   function isLiveBroadcast() {
-    const moviePlayerLive = getMoviePlayerLiveState();
-    if (moviePlayerLive === true) return true;
+    return getCachedSignal('liveBroadcast', () => {
+      const moviePlayerLive = getMoviePlayerLiveState();
+      if (moviePlayerLive === true) return true;
 
-    const initialPlayerResponseLive = getInitialPlayerResponseLiveState();
-    if (initialPlayerResponseLive === true) return true;
+      const initialPlayerResponseLive = getInitialPlayerResponseLiveState();
+      if (initialPlayerResponseLive === true) return true;
 
-    const inlinePlayerResponseLive = getInlinePlayerResponseLiveState();
-    if (inlinePlayerResponseLive === true) return true;
+      const inlinePlayerResponseLive = getInlinePlayerResponseLiveState();
+      if (inlinePlayerResponseLive === true) return true;
 
-    const watchFlexy = document.querySelector('ytd-watch-flexy');
-    const watchGrid = document.querySelector('ytd-watch-grid');
-    if (watchFlexy?.hasAttribute('is-live-now') || watchGrid?.hasAttribute('is-live-now')) return true;
+      const watchFlexy = document.querySelector('ytd-watch-flexy');
+      const watchGrid = document.querySelector('ytd-watch-grid');
+      if (watchFlexy?.hasAttribute('is-live-now') || watchGrid?.hasAttribute('is-live-now')) return true;
 
-    if (document.querySelector('.ytp-time-display.ytp-live, .ytp-live-badge.ytp-live-badge-is-livehead')) {
-      return true;
-    }
-    return false;
+      if (document.querySelector('.ytp-time-display.ytp-live, .ytp-live-badge.ytp-live-badge-is-livehead')) {
+        return true;
+      }
+      return false;
+    });
   }
 
   function hasArchiveReplaySignal() {
-    if (isLiveBroadcast()) return false;
-
     const iframe = getLiveChatIframe();
     if (iframe && isIframeForCurrentVideo(iframe, getVideoId()) && isReplayChatIframe(iframe)) return true;
+
+    return getCachedSignal('archiveReplaySignal', computeArchiveReplaySignal);
+  }
+
+  function computeArchiveReplaySignal() {
+    if (isLiveBroadcast()) return false;
 
     // Check modern video metadata carousel specifically for replay text
     const carouselItems = document.querySelectorAll('yt-video-metadata-carousel-view-model');
@@ -247,17 +302,7 @@ function debounce(func, wait) {
     }
 
     // Check inline player response / ytInitialData for replay continuation
-    try {
-      const scripts = document.querySelectorAll('script');
-      for (const script of scripts) {
-        const text = script.textContent || '';
-        if (text.includes('liveChatReplayContinuation')) {
-          return true;
-        }
-      }
-    } catch {}
-
-    return false;
+    return hasReplayContinuationSignal();
   }
 
   function isYouTubeLiveNow() {
@@ -428,12 +473,47 @@ function debounce(func, wait) {
     return tryInvokeChatFrameShowHide();
   }
 
+  function isReusableLiveChatIframe(iframe, videoId) {
+    if (!iframe) return false;
+    if (iframe.getAttribute('data-yt-overlay-owned') === 'true') return false;
+    if (!isIframeForCurrentVideo(iframe, videoId)) return false;
+    if (hasUnavailableChatDocument(iframe)) return false;
+    // YouTube only loads chat into its own host frame, so an empty frame cannot be
+    // borrowed: require a document that is already running.
+    if (!isLiveChatIframe(iframe)) return false;
+    return Boolean(iframe.id === 'chatframe' || iframe.closest('ytd-live-chat-frame'));
+  }
+
+  function findNativeLiveChatIframe(currentIframe) {
+    const candidates = document.querySelectorAll('iframe#chatframe, ytd-live-chat-frame iframe, iframe[src*="live_chat"]');
+    const videoId = getVideoId();
+    let fallback = null;
+    for (const candidate of candidates) {
+      if (!isReusableLiveChatIframe(candidate, videoId)) continue;
+      // Keep the frame we are already serving so the overlay never churns.
+      if (candidate === currentIframe) return candidate;
+      if (!fallback) fallback = candidate;
+    }
+    return fallback;
+  }
+
+  function isBorrowedSourceKind(kind) {
+    return kind === 'archive_borrow' || kind === 'native_borrow';
+  }
+
   function resolveLiveChatSource(currentIframe) {
     const videoId = getVideoId();
     if (!videoId) return null;
     if (!isYouTubeLiveNow()) return null;
     const nativeIframe = getLiveChatIframe();
     if (nativeIframe && isReplayChatIframe(nativeIframe)) return null;
+    // Reuse YouTube's own live chat document when one is already running. A second,
+    // overlay-owned copy keeps receiving and rendering every message behind the
+    // scenes (~33 MB heap, ~70% of chat script time - see docs/perf-findings.md).
+    const borrowable = findNativeLiveChatIframe(currentIframe);
+    if (borrowable) {
+      return { kind: 'native_borrow', iframe: borrowable };
+    }
     const url = new URL('https://www.youtube.com/live_chat');
     url.searchParams.set('v', videoId);
     if (isYouTubeDarkMode()) {
