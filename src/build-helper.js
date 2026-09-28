@@ -153,7 +153,20 @@ async function build(target) {
     } else if (target === 'firefox') {
       buildOpts.filename = 'youtube_live_chat_overlay-firefox-{version}.zip';
     }
-    
+
+    try {
+      const manifestPath = path.join(__dirname, 'manifest.json');
+      if (fs.existsSync(manifestPath)) {
+        const pkgManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        if (pkgManifest.version && buildOpts.filename) {
+          const expectedFile = path.join(defaultArtifactsDir, buildOpts.filename.replace('{version}', pkgManifest.version));
+          if (fs.existsSync(expectedFile)) {
+            fs.unlinkSync(expectedFile);
+          }
+        }
+      }
+    } catch {}
+
     await webExt.cmd.build(buildOpts, { shouldExitProgram: false });
     if (target === 'chrome' || target === 'default' || target === 'firefox') {
       const unpackedDir = buildUnpacked(target);

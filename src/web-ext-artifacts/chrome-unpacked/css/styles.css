@@ -75,6 +75,19 @@
   color: white;
   user-select: none;
   cursor: grab;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#overlay-chat-container:hover #drag-handle,
+#overlay-chat-container.dragging #drag-handle,
+#overlay-chat-container.resizing #drag-handle,
+#overlay-chat-container.settings-open #drag-handle,
+#overlay-chat-container:has(#settings-panel.show) #drag-handle {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 #overlay-chat-container.dragging {

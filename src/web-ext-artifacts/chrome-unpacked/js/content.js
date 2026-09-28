@@ -306,25 +306,34 @@ function setupUrlObserver() {
 
   const callback = debounce((mutations) => {
     const urlChanged = location.href !== lastUrl;
-    const hasRelevantChanges = mutations && mutations.some((mutation) => {
-      if (!mutation.addedNodes?.length) return false;
-      return Array.from(mutation.addedNodes).some((node) => {
-        if (node.nodeType !== Node.ELEMENT_NODE) return false;
-        return node.id === 'chat' ||
-          node.id === 'chatframe' ||
-          node.matches?.('iframe[src*="live_chat"], ytd-live-chat-frame, #chat-container, #secondary') ||
-          node.querySelector?.('iframe[src*="live_chat"], ytd-live-chat-frame, #chat-container, #secondary');
-      });
-    });
-
-    if (!urlChanged && !hasRelevantChanges) return;
     if (urlChanged) {
       removeOverlayDom();
       lastUrl = location.href;
       startInjection();
       return;
     }
-    attemptChatDetection();
+
+    if (!mutations) return;
+    let hasRelevantChanges = false;
+    for (let i = 0; i < mutations.length; i++) {
+      const addedNodes = mutations[i].addedNodes;
+      if (!addedNodes || addedNodes.length === 0) continue;
+      for (let j = 0; j < addedNodes.length; j++) {
+        const node = addedNodes[j];
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (node.id === 'chat' || node.id === 'chatframe' ||
+            node.matches?.('iframe[src*="live_chat"], ytd-live-chat-frame, #chat-container, #secondary') ||
+            node.querySelector?.('iframe[src*="live_chat"], ytd-live-chat-frame, #chat-container, #secondary')) {
+          hasRelevantChanges = true;
+          break;
+        }
+      }
+      if (hasRelevantChanges) break;
+    }
+
+    if (hasRelevantChanges) {
+      attemptChatDetection();
+    }
   }, 250);
 
   urlObserver = new MutationObserver(callback);
@@ -370,7 +379,7 @@ function startInjection() {
 }
 
 function setupPlayerFullscreenObserver() {
-  const player = getVideoPlayer();
+  const player = (videoPlayer && videoPlayer.isConnected) ? videoPlayer : getVideoPlayer();
   if (!player || playerFullscreenObserver) return;
 
   videoPlayer = player;

@@ -56,17 +56,20 @@ function createToggleButton(videoPlayer, toggleCallback) {
 function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   settingsIcon.addEventListener("click", (event) => {
     event.stopPropagation();
-    settingsPanel.classList.toggle("show");
+    const isShown = settingsPanel.classList.toggle("show");
+    container.classList.toggle("settings-open", isShown);
   });
 
   document.addEventListener("click", (event) => {
     if (!settingsPanel.contains(event.target) && event.target !== settingsIcon) {
       settingsPanel.classList.remove("show");
+      container.classList.remove("settings-open");
     }
   });
 
   const opacitySlider = settingsPanel.querySelector("#opacity-slider");
-  const savedOpacity = localStorage.getItem("chatOverlayOpacity") || 50;
+  const rawSavedOpacity = localStorage.getItem("chatOverlayOpacity");
+  const savedOpacity = rawSavedOpacity !== null ? Number(rawSavedOpacity) : 50;
   opacitySlider.value = savedOpacity;
   container.style.backgroundColor = `rgba(0, 0, 0, ${savedOpacity / 100})`;
 
@@ -78,7 +81,8 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   });
 
   const blurSlider = settingsPanel.querySelector("#blur-slider");
-  const savedBlur = localStorage.getItem("chatOverlayBlur") || 8;
+  const rawSavedBlur = localStorage.getItem("chatOverlayBlur");
+  const savedBlur = rawSavedBlur !== null ? Number(rawSavedBlur) : 8;
   blurSlider.value = savedBlur;
   container.style.backdropFilter = `blur(${savedBlur}px)`;
 
@@ -97,23 +101,49 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   const savedHideHeader = localStorage.getItem("chatOverlayHideHeader") === "true";
   headerToggle.checked = savedHideHeader;
 
-  applyTickerHideStyle(savedHideTicker, savedHideHeader);
+  const autoHideHeaderToggle = settingsPanel.querySelector("#auto-hide-header-toggle");
+  const savedAutoHideHeader = localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
+  autoHideHeaderToggle.checked = savedAutoHideHeader;
+
+  const inputToggle = settingsPanel.querySelector("#hide-input-toggle");
+  const savedHideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
+  if (inputToggle) inputToggle.checked = savedHideInput;
+
+  applyTickerHideStyle(savedHideTicker, savedHideHeader, savedAutoHideHeader, savedHideInput);
+
+  function syncThemeStyles() {
+    const hideTicker = tickerToggle.checked;
+    const hideHeader = headerToggle.checked;
+    const autoHideHeader = autoHideHeaderToggle.checked;
+    const hideInput = inputToggle ? inputToggle.checked : true;
+    localStorage.setItem("chatOverlayHideTicker", hideTicker);
+    localStorage.setItem("chatOverlayHideHeader", hideHeader);
+    localStorage.setItem("chatOverlayAutoHideHeader", autoHideHeader);
+    localStorage.setItem("chatOverlayHideInput", hideInput);
+    applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader, hideInput);
+  }
 
   tickerToggle.addEventListener("change", (event) => {
     event.stopPropagation();
-    const hideTicker = event.target.checked;
-    const hideHeader = headerToggle.checked;
-    localStorage.setItem("chatOverlayHideTicker", hideTicker);
-    applyTickerHideStyle(hideTicker, hideHeader);
+    syncThemeStyles();
   });
 
   headerToggle.addEventListener("change", (event) => {
     event.stopPropagation();
-    const hideTicker = tickerToggle.checked;
-    const hideHeader = event.target.checked;
-    localStorage.setItem("chatOverlayHideHeader", hideHeader);
-    applyTickerHideStyle(hideTicker, hideHeader);
+    syncThemeStyles();
   });
+
+  autoHideHeaderToggle.addEventListener("change", (event) => {
+    event.stopPropagation();
+    syncThemeStyles();
+  });
+
+  if (inputToggle) {
+    inputToggle.addEventListener("change", (event) => {
+      event.stopPropagation();
+      syncThemeStyles();
+    });
+  }
 
   settingsPanel.addEventListener("mousedown", (event) => event.stopPropagation());
   settingsPanel.addEventListener("click", (event) => event.stopPropagation());
@@ -153,7 +183,7 @@ function createSettingsPanelElement() {
   opacityLabel.htmlFor = "opacity-slider";
   const opacityInput = document.createElement("input");
   opacityInput.type = "range";
-  opacityInput.min = "10";
+  opacityInput.min = "0";
   opacityInput.max = "100";
   opacityInput.value = "50";
   opacityInput.id = "opacity-slider";
@@ -177,6 +207,20 @@ function createSettingsPanelElement() {
   blurRow.appendChild(blurInput);
   panel.appendChild(blurRow);
 
+  // Auto-hide header toggle
+  const autoHideRow = document.createElement("div");
+  autoHideRow.className = "toggle-control";
+  const autoHideLabel = document.createElement("label");
+  autoHideLabel.textContent = "Auto-hide header on hover";
+  autoHideLabel.htmlFor = "auto-hide-header-toggle";
+  const autoHideInput = document.createElement("input");
+  autoHideInput.type = "checkbox";
+  autoHideInput.id = "auto-hide-header-toggle";
+  autoHideInput.checked = true;
+  autoHideRow.appendChild(autoHideLabel);
+  autoHideRow.appendChild(autoHideInput);
+  panel.appendChild(autoHideRow);
+
   // Hide ticker toggle
   const tickerRow = document.createElement("div");
   tickerRow.className = "toggle-control";
@@ -194,7 +238,7 @@ function createSettingsPanelElement() {
   const headerRow = document.createElement("div");
   headerRow.className = "toggle-control";
   const headerLabel = document.createElement("label");
-  headerLabel.textContent = "Hide chat header";
+  headerLabel.textContent = "Always hide chat header";
   headerLabel.htmlFor = "hide-header-toggle";
   const headerInput = document.createElement("input");
   headerInput.type = "checkbox";
@@ -202,6 +246,20 @@ function createSettingsPanelElement() {
   headerRow.appendChild(headerLabel);
   headerRow.appendChild(headerInput);
   panel.appendChild(headerRow);
+
+  // Hide chat input (comment, love, money) toggle
+  const inputRow = document.createElement("div");
+  inputRow.className = "toggle-control";
+  const inputLabel = document.createElement("label");
+  inputLabel.textContent = "Hide chat input (comment, love, money)";
+  inputLabel.htmlFor = "hide-input-toggle";
+  const inputInput = document.createElement("input");
+  inputInput.type = "checkbox";
+  inputInput.id = "hide-input-toggle";
+  inputInput.checked = true;
+  inputRow.appendChild(inputLabel);
+  inputRow.appendChild(inputInput);
+  panel.appendChild(inputRow);
 
   return panel;
 }
@@ -312,7 +370,52 @@ function createManagedLiveIframe(source) {
   return iframe;
 }
 
-function getThemeOverrideCss(hideTicker, hideHeader) {
+function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hideInput = true) {
+  let headerRules = "";
+  if (hideHeader) {
+    headerRules = "yt-live-chat-header-renderer { display: none !important; }";
+  } else if (autoHideHeader) {
+    headerRules = `
+      yt-live-chat-header-renderer {
+        opacity: 0 !important;
+        max-height: 0 !important;
+        min-height: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        pointer-events: none !important;
+        transition: opacity 0.25s ease, max-height 0.25s ease, padding 0.25s ease !important;
+      }
+      yt-live-chat-app:hover yt-live-chat-header-renderer,
+      yt-live-chat-renderer:hover yt-live-chat-header-renderer {
+        opacity: 1 !important;
+        max-height: 60px !important;
+        height: auto !important;
+        pointer-events: auto !important;
+      }
+    `;
+  }
+
+  const inputRules = hideInput ? `
+    #action-panel,
+    #panel-pages,
+    #input-panel,
+    yt-live-chat-message-input-renderer,
+    yt-reaction-control-panel-overlay-renderer,
+    #reaction-control-panel-overlay,
+    #reactions,
+    yt-live-chat-reaction-control-panel-renderer,
+    yt-live-chat-renderer > #separator {
+      display: none !important;
+    }
+    #item-scroller {
+      margin-bottom: 0 !important;
+      padding-bottom: 8px !important;
+    }
+  ` : "";
+
   return `
     body {
       background-color: transparent !important;
@@ -335,7 +438,8 @@ function getThemeOverrideCss(hideTicker, hideHeader) {
       color: rgba(235, 232, 232, 0.7) !important;
     }
     ${hideTicker ? "yt-live-chat-ticker-renderer { display: none !important; }" : ""}
-    ${hideHeader ? "yt-live-chat-header-renderer { display: none !important; }" : ""}
+    ${headerRules}
+    ${inputRules}
   `;
 }
 
@@ -349,14 +453,16 @@ function injectChatIframeThemeOverride(iframe) {
 
     const hideTicker = localStorage.getItem("chatOverlayHideTicker") === "true";
     const hideHeader = localStorage.getItem("chatOverlayHideHeader") === "true";
+    const autoHideHeader = localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
+    const hideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
     const style = doc.createElement("style");
     style.id = "yt-overlay-theme-override";
-    style.textContent = getThemeOverrideCss(hideTicker, hideHeader);
+    style.textContent = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
     doc.head?.appendChild(style) || doc.documentElement?.appendChild(style);
   } catch {}
 }
 
-function applyTickerHideStyle(hideTicker, hideHeader) {
+function applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader = true, hideInput = true) {
   document.querySelectorAll("iframe[data-yt-overlay-chat='true']").forEach((iframe) => {
     try {
       const doc = iframe.contentDocument;
@@ -367,7 +473,7 @@ function applyTickerHideStyle(hideTicker, hideHeader) {
         style.id = "yt-overlay-theme-override";
         doc.head?.appendChild(style) || doc.documentElement?.appendChild(style);
       }
-      style.textContent = getThemeOverrideCss(hideTicker, hideHeader);
+      style.textContent = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
     } catch {}
   });
 }
@@ -590,6 +696,11 @@ function detachChatSource() {
     const restored = restoreBorrowedIframe(activeChatIframe) || restoreIframeToNativeHost(activeChatIframe);
     if (!restored) queueRestoreToNativeHost(activeChatIframe);
   } else {
+    activeChatIframe.onload = null;
+    activeChatIframe.onerror = null;
+    try {
+      activeChatIframe.src = "about:blank";
+    } catch {}
     activeChatIframe.remove();
   }
 
@@ -616,10 +727,12 @@ function toggleOverlayChat(overlayChatContainer, iframeContainer, toggleButton) 
 }
 
 function initializeOverlayState(overlayChatContainer) {
-  const savedOpacity = localStorage.getItem("chatOverlayOpacity") || 50;
-  overlayChatContainer.style.backgroundColor = `rgba(0, 0, 0, ${savedOpacity / 100})`;
-  const savedBlur = localStorage.getItem("chatOverlayBlur") || 8;
-  overlayChatContainer.style.backdropFilter = `blur(${savedBlur}px)`;
+  const rawSavedOpacity = localStorage.getItem("chatOverlayOpacity");
+  const opacityVal = rawSavedOpacity !== null ? Number(rawSavedOpacity) : 50;
+  overlayChatContainer.style.backgroundColor = `rgba(0, 0, 0, ${opacityVal / 100})`;
+  const rawSavedBlur = localStorage.getItem("chatOverlayBlur");
+  const blurVal = rawSavedBlur !== null ? Number(rawSavedBlur) : 8;
+  overlayChatContainer.style.backdropFilter = `blur(${blurVal}px)`;
   log("Overlay state initialized with native chat iframe source");
 }
 
