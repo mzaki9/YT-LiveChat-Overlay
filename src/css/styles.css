@@ -510,3 +510,10 @@ html[data-avatars-enabled="false"] .chat-message:not(:first-child) {
   border-top: none; 
   margin-top: 3px; 
 }
+
+/* In fullscreen, hide native panels container if flexy is fullscreen so video is 100% full bleed */
+ytd-watch-flexy[fullscreen] #panels-full-bleed-container,
+ytd-watch-grid[fullscreen] #panels-full-bleed-container {
+  display: none !important;
+}
+

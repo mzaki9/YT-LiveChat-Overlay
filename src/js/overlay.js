@@ -109,18 +109,26 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   const savedHideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
   if (inputToggle) inputToggle.checked = savedHideInput;
 
+  const stealthReplayToggle = settingsPanel.querySelector("#hide-native-replay-toggle");
+  const savedStealthReplay = isStealthReplayEnabled();
+  if (stealthReplayToggle) stealthReplayToggle.checked = savedStealthReplay;
+
   applyTickerHideStyle(savedHideTicker, savedHideHeader, savedAutoHideHeader, savedHideInput);
+  applyStealthReplayStyle(savedStealthReplay);
 
   function syncThemeStyles() {
     const hideTicker = tickerToggle.checked;
     const hideHeader = headerToggle.checked;
     const autoHideHeader = autoHideHeaderToggle.checked;
     const hideInput = inputToggle ? inputToggle.checked : true;
+    const hideStealthReplay = stealthReplayToggle ? stealthReplayToggle.checked : true;
     localStorage.setItem("chatOverlayHideTicker", hideTicker);
     localStorage.setItem("chatOverlayHideHeader", hideHeader);
     localStorage.setItem("chatOverlayAutoHideHeader", autoHideHeader);
     localStorage.setItem("chatOverlayHideInput", hideInput);
+    localStorage.setItem("chatOverlayStealthReplay", hideStealthReplay);
     applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader, hideInput);
+    applyStealthReplayStyle(hideStealthReplay);
   }
 
   tickerToggle.addEventListener("change", (event) => {
@@ -140,6 +148,13 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
 
   if (inputToggle) {
     inputToggle.addEventListener("change", (event) => {
+      event.stopPropagation();
+      syncThemeStyles();
+    });
+  }
+
+  if (stealthReplayToggle) {
+    stealthReplayToggle.addEventListener("change", (event) => {
       event.stopPropagation();
       syncThemeStyles();
     });
@@ -260,6 +275,20 @@ function createSettingsPanelElement() {
   inputRow.appendChild(inputLabel);
   inputRow.appendChild(inputInput);
   panel.appendChild(inputRow);
+
+  // Hide native replay sidebar toggle
+  const stealthReplayRow = document.createElement("div");
+  stealthReplayRow.className = "toggle-control";
+  const stealthReplayLabel = document.createElement("label");
+  stealthReplayLabel.textContent = "Hide native replay sidebar";
+  stealthReplayLabel.htmlFor = "hide-native-replay-toggle";
+  const stealthReplayInput = document.createElement("input");
+  stealthReplayInput.type = "checkbox";
+  stealthReplayInput.id = "hide-native-replay-toggle";
+  stealthReplayInput.checked = true;
+  stealthReplayRow.appendChild(stealthReplayLabel);
+  stealthReplayRow.appendChild(stealthReplayInput);
+  panel.appendChild(stealthReplayRow);
 
   return panel;
 }
@@ -478,6 +507,16 @@ function applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader = true, hid
   });
 }
 
+function isStealthReplayEnabled() {
+  return localStorage.getItem("chatOverlayStealthReplay") !== "false";
+}
+
+function applyStealthReplayStyle() {
+  if (document.documentElement.hasAttribute("data-yt-overlay-stealth-replay")) {
+    document.documentElement.removeAttribute("data-yt-overlay-stealth-replay");
+  }
+}
+
 function isManagedLiveIframe(iframe) {
   return iframe?.getAttribute("data-yt-overlay-owned") === "true" &&
     iframe?.getAttribute("data-yt-overlay-source") === "live_direct";
@@ -518,6 +557,7 @@ function syncBorrowedIframeSrcWithDocumentHref(iframe) {
 }
 
 function rememberBorrowedIframe(iframe, container) {
+  syncBorrowedIframeSrcWithDocumentHref(iframe);
   if (borrowedIframeRestoreTarget || iframe.parentNode === container) return;
   const placeholder = document.createComment("yt-overlay-borrowed-chat-anchor");
   iframe.parentNode.insertBefore(placeholder, iframe);
@@ -538,7 +578,6 @@ function rememberBorrowedIframe(iframe, container) {
       backgroundColor: iframe.style.backgroundColor,
     },
   };
-  syncBorrowedIframeSrcWithDocumentHref(iframe);
 }
 
 function restoreBorrowedIframe(iframe) {
@@ -642,6 +681,10 @@ function attachChatSource(iframeContainer) {
   }
   const source = mode === "archive" ? resolveArchiveChatSource(activeChatIframe) : resolveLiveChatSource(activeChatIframe);
   if (!source) {
+    if (activeChatIframe && activeChatIframe.parentElement === iframeContainer && isReplayChatIframe(activeChatIframe)) {
+      debugState("attachChatSource:pending replay reload", { href: getIframeHref(activeChatIframe) });
+      return true;
+    }
     debugState("attachChatSource:no source", {
       mode,
       videoId: getVideoId(),
@@ -673,6 +716,9 @@ function attachChatSource(iframeContainer) {
   applyChatIframeStyle(activeChatIframe);
   iframeContainer.appendChild(activeChatIframe);
   injectChatIframeThemeOverride(activeChatIframe);
+  activeChatIframe.addEventListener("load", () => {
+    injectChatIframeThemeOverride(activeChatIframe);
+  }, { once: true });
   debugState("attachChatSource:appended", {
     kind: activeChatSourceKind,
     childCount: iframeContainer.childElementCount,

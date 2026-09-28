@@ -128,8 +128,13 @@ function debounce(func, wait) {
     if (hasUnavailableChatDocument(iframe)) return false;
     try {
       const doc = iframe.contentDocument;
-      if (!doc || !doc.body || doc.location.href.includes('about:blank')) return false;
-      return Boolean(doc.querySelector('yt-live-chat-renderer, yt-live-chat-item-list-renderer'));
+      if (!doc || !doc.body || doc.location.href.includes('about:blank')) {
+        if (iframe.getAttribute('data-yt-overlay-chat') === 'true') {
+          return true;
+        }
+        return false;
+      }
+      return Boolean(doc.querySelector('yt-live-chat-renderer, yt-live-chat-item-list-renderer, yt-live-chat-app'));
     } catch {
       return true;
     }
@@ -181,20 +186,82 @@ function debounce(func, wait) {
     return null;
   }
 
+  function isLiveBroadcast() {
+    const moviePlayerLive = getMoviePlayerLiveState();
+    if (moviePlayerLive === true) return true;
+
+    const initialPlayerResponseLive = getInitialPlayerResponseLiveState();
+    if (initialPlayerResponseLive === true) return true;
+
+    const inlinePlayerResponseLive = getInlinePlayerResponseLiveState();
+    if (inlinePlayerResponseLive === true) return true;
+
+    const watchFlexy = document.querySelector('ytd-watch-flexy');
+    const watchGrid = document.querySelector('ytd-watch-grid');
+    if (watchFlexy?.hasAttribute('is-live-now') || watchGrid?.hasAttribute('is-live-now')) return true;
+
+    if (document.querySelector('.ytp-time-display.ytp-live, .ytp-live-badge.ytp-live-badge-is-livehead')) {
+      return true;
+    }
+    return false;
+  }
+
   function hasArchiveReplaySignal() {
+    if (isLiveBroadcast()) return false;
+
     const iframe = getLiveChatIframe();
     if (iframe && isIframeForCurrentVideo(iframe, getVideoId()) && isReplayChatIframe(iframe)) return true;
-    const replayButton = document.querySelector('#show-hide-button button, ytd-live-chat-frame #show-hide-button button, #chat-container #show-hide-button button');
-    const label = [
-      replayButton?.getAttribute('aria-label'),
-      replayButton?.getAttribute('title'),
-      replayButton?.getAttribute('data-title-no-tooltip'),
-      replayButton?.getAttribute('data-tooltip-text')
-    ].join(' ').toLowerCase();
-    return label.includes('replay') || label.includes('リプレイ');
+
+    // Check modern video metadata carousel specifically for replay text
+    const carouselItems = document.querySelectorAll('yt-video-metadata-carousel-view-model');
+    for (const item of carouselItems) {
+      const text = `${item.getAttribute('aria-label') || ''} ${item.innerText || ''}`.toLowerCase();
+      if (text.includes('chat replay') || text.includes('リプレイ')) {
+        return true;
+      }
+    }
+
+    // Check buttons specifically for replay labels
+    const replayButtons = document.querySelectorAll(
+      'button[aria-label*="chat replay" i], ' +
+      'button[aria-label*="Show chat replay" i], ' +
+      'button[aria-label*="チャットのリプレイ" i]'
+    );
+    for (const btn of replayButtons) {
+      const label = [
+        btn.getAttribute('aria-label'),
+        btn.getAttribute('title'),
+        btn.getAttribute('data-title-no-tooltip'),
+        btn.getAttribute('data-tooltip-text'),
+        btn.innerText
+      ].join(' ').toLowerCase();
+      if (label.includes('replay') || label.includes('リプレイ')) {
+        return true;
+      }
+    }
+
+    const isLive = getMoviePlayerLiveState();
+    if (isLive === false) {
+      const watchFlexy = document.querySelector('ytd-watch-flexy');
+      if (watchFlexy?.hasAttribute('should-stamp-chat')) return true;
+    }
+
+    // Check inline player response / ytInitialData for replay continuation
+    try {
+      const scripts = document.querySelectorAll('script');
+      for (const script of scripts) {
+        const text = script.textContent || '';
+        if (text.includes('liveChatReplayContinuation')) {
+          return true;
+        }
+      }
+    } catch {}
+
+    return false;
   }
 
   function isYouTubeLiveNow() {
+    if (isLiveBroadcast()) return true;
     if (hasArchiveReplaySignal()) return false;
     const watchFlexy = document.querySelector('ytd-watch-flexy');
     const watchGrid = document.querySelector('ytd-watch-grid');
@@ -240,27 +307,21 @@ function debounce(func, wait) {
   }
 
   const archiveSidebarOpenSelectors = [
-    'ytd-live-chat-frame #show-hide-button button',
-    'ytd-live-chat-frame #show-hide-button yt-icon-button',
-    '#chat-container #show-hide-button button',
-    '#chat-container #show-hide-button yt-icon-button',
-    'ytd-live-chat-frame #show-hide-button',
-    '#chat-container #show-hide-button'
+    'yt-video-metadata-carousel-view-model [role="button"]',
+    'yt-video-metadata-carousel-view-model button',
+    'button[aria-label*="Show chat replay" i]',
+    'button[aria-label*="chat replay" i]',
+    'button[aria-label*="チャットのリプレイ" i]'
   ];
 
-  const archivePlayerChatToggleSelectors = [
-    '.ytp-right-controls toggle-button-view-model button[aria-pressed="false"]',
-    '.ytp-right-controls button-view-model button[aria-pressed="false"]',
-    '#movie_player toggle-button-view-model button[aria-pressed="false"]',
-    '#movie_player button-view-model button[aria-pressed="false"]'
-  ];
 
   function getButtonLabelText(element) {
-    return `${element.getAttribute('aria-label') || ''} ${element.getAttribute('title') || ''} ${element.getAttribute('data-title-no-tooltip') || ''} ${element.getAttribute('data-tooltip-text') || ''}`.toLowerCase();
+    const carouselText = element.closest('yt-video-metadata-carousel-view-model')?.innerText || '';
+    return `${element.getAttribute('aria-label') || ''} ${element.getAttribute('title') || ''} ${element.getAttribute('data-title-no-tooltip') || ''} ${element.getAttribute('data-tooltip-text') || ''} ${element.innerText || ''} ${carouselText}`.toLowerCase();
   }
 
   function isChatLabel(label) {
-    return label.includes('chat') || label.includes('チャット');
+    return label.includes('replay') || label.includes('リプレイ') || label.includes('open panel');
   }
 
   function isElementVisible(element) {
@@ -311,8 +372,6 @@ function debounce(func, wait) {
   function hasArchiveNativeOpenControl() {
     if (findFirstMatchingControl(archiveSidebarOpenSelectors, { requireVisible: true })) return true;
     if (findFirstMatchingControl(archiveSidebarOpenSelectors, { requireVisible: false })) return true;
-    if (findFirstMatchingControl(archivePlayerChatToggleSelectors, { requireChatLabel: true, requireVisible: true })) return true;
-    if (findFirstMatchingControl(archivePlayerChatToggleSelectors, { requireChatLabel: true, requireVisible: false })) return true;
     return hasChatFrameShowHideHandler() && hasArchiveShowHideSlotContent();
   }
 
@@ -335,19 +394,18 @@ function debounce(func, wait) {
     return !href || href.includes('about:blank');
   }
 
-  function revealPlayerControls() {
-    const moviePlayer = document.getElementById('movie_player');
-    if (!moviePlayer) return;
-    for (const type of ['mouseover', 'mousemove', 'mouseenter']) {
-      moviePlayer.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, composed: true }));
-    }
-  }
-
   function tryInvokeChatFrameShowHide() {
     const host = document.querySelector('ytd-live-chat-frame');
-    if (typeof host?.onShowHideChat !== 'function') return false;
-    host.onShowHideChat();
-    return true;
+    if (!host) return false;
+    if (typeof host.onShowHideChat === 'function') {
+      host.onShowHideChat();
+      return true;
+    }
+    if (host.collapsed === true) {
+      host.collapsed = false;
+      return true;
+    }
+    return false;
   }
 
   function clickFirstMatchingSelector(selectors, options = {}) {
@@ -358,12 +416,15 @@ function debounce(func, wait) {
   }
 
   function openArchiveNativeChatPanel() {
-    if (isNativeChatMarkedExpanded() && !isNativeChatIframeBlank() && isNativeChatHostVisible()) return false;
-    if (clickFirstMatchingSelector(archiveSidebarOpenSelectors, { requireVisible: true })) return true;
-    if (clickFirstMatchingSelector(archiveSidebarOpenSelectors, { requireVisible: false })) return true;
-    revealPlayerControls();
-    if (clickFirstMatchingSelector(archivePlayerChatToggleSelectors, { requireChatLabel: true, requireVisible: true })) return true;
-    if (clickFirstMatchingSelector(archivePlayerChatToggleSelectors, { requireChatLabel: true, requireVisible: false })) return true;
+    if (isLiveBroadcast() || isYouTubeLiveNow()) return false;
+    const host = document.querySelector('ytd-live-chat-frame');
+    const isFrameCollapsed = host?.collapsed === true || (host && window.getComputedStyle(host).display === 'none');
+    if (!isFrameCollapsed && isNativeChatMarkedExpanded() && !isNativeChatIframeBlank() && isNativeChatHostVisible()) {
+      return false;
+    }
+
+    if (clickFirstMatchingSelector(archiveSidebarOpenSelectors, { requireChatLabel: true, requireVisible: true })) return true;
+    if (clickFirstMatchingSelector(archiveSidebarOpenSelectors, { requireChatLabel: true, requireVisible: false })) return true;
     return tryInvokeChatFrameShowHide();
   }
 
@@ -387,6 +448,11 @@ function debounce(func, wait) {
     if (!nativeIframe) return null;
     if (nativeIframe.getAttribute('data-yt-overlay-owned') === 'true') return null;
     if (!isIframeForCurrentVideo(nativeIframe, videoId)) return null;
+    if (nativeIframe === currentIframe && currentIframe?.getAttribute('data-yt-overlay-chat') === 'true') {
+      if (isReplayChatIframe(currentIframe)) {
+        return { kind: 'archive_borrow', iframe: currentIframe };
+      }
+    }
     if (!isArchiveChatPlayable(nativeIframe)) return null;
     return { kind: 'archive_borrow', iframe: nativeIframe };
   }
