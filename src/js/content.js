@@ -15,6 +15,7 @@ let lifecycleInterval;
 let attachRetryInterval;
 let playerFullscreenObserver;
 let lastUrl = location.href;
+let currentVideoId = typeof getVideoId === 'function' ? getVideoId() : null;
 
 const extApi = globalThis.browser || globalThis.chrome || null;
 
@@ -165,6 +166,9 @@ function handleFullscreenChange() {
     toggleOverlayChat(overlayChatContainer, chatIframeContainer, toggleButton);
   }
   if (isOverlayVisible && !isActiveChatIframeLoaded()) startAttachRetry();
+  if (isOverlayVisible && typeof ensureActiveChatThemeOverride === 'function') {
+    ensureActiveChatThemeOverride();
+  }
 }
 
 function startAttachRetry() {
@@ -184,6 +188,9 @@ function startAttachRetry() {
       return;
     }
     attachChatSource(chatIframeContainer);
+    if (typeof ensureActiveChatThemeOverride === 'function') {
+      ensureActiveChatThemeOverride();
+    }
     debugState('attachRetry:tick', {
       loaded: isActiveChatIframeLoaded(),
       elapsed: Date.now() - startedAt,
@@ -301,15 +308,43 @@ function injectLiveChatOverlay() {
   }
 }
 
+function handleVideoChange(newVid) {
+  if (!newVid || newVid === currentVideoId) return false;
+  const oldVid = currentVideoId;
+  currentVideoId = newVid;
+  lastUrl = location.href;
+
+  if (typeof invalidateSignalCache === 'function') invalidateSignalCache();
+  if (typeof markChatIframesStale === 'function' && oldVid) {
+    markChatIframesStale(oldVid);
+  }
+
+  removeOverlayDom();
+
+  if (playerFullscreenObserver) {
+    playerFullscreenObserver.disconnect();
+    playerFullscreenObserver = null;
+  }
+  setupPlayerFullscreenObserver();
+
+  if (isYouTubeFullscreen()) {
+    startInjection();
+  }
+  return true;
+}
+
 function setupUrlObserver() {
   if (urlObserver) urlObserver.disconnect();
 
   const callback = debounce((mutations) => {
-    const urlChanged = location.href !== lastUrl;
-    if (urlChanged) {
-      removeOverlayDom();
+    const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+    if (newVid && newVid !== currentVideoId) {
+      handleVideoChange(newVid);
+      return;
+    }
+    if (location.href !== lastUrl) {
       lastUrl = location.href;
-      startInjection();
+      if (newVid) handleVideoChange(newVid);
       return;
     }
 
@@ -342,6 +377,11 @@ function setupUrlObserver() {
 
 function attemptChatDetection() {
   if (!getVideoPlayer() || !getVideoId()) return false;
+  const vid = getVideoId();
+  if (currentVideoId && vid !== currentVideoId) {
+    handleVideoChange(vid);
+    return true;
+  }
   const existingOverlay = document.getElementById('overlay-chat-container');
   if (existingOverlay) {
     ensureOverlayConnected();
@@ -398,6 +438,11 @@ function initializeLifecycle() {
 
   if (lifecycleInterval) return;
   lifecycleInterval = setInterval(() => {
+    const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+    if (newVid && newVid !== currentVideoId) {
+      handleVideoChange(newVid);
+      return;
+    }
     setupPlayerFullscreenObserver();
     if (!playerFullscreenObserver || !isYouTubeFullscreen()) return;
     startInjection();
@@ -405,6 +450,9 @@ function initializeLifecycle() {
     // is running, adopt it so only one live chat document stays alive instead of
     // ours plus the hidden native one (docs/perf-findings.md, finding #1).
     if (chatIframeContainer && shouldUpgradeToNativeChat()) attachChatSource(chatIframeContainer);
+    if (isOverlayVisible && typeof ensureActiveChatThemeOverride === 'function') {
+      ensureActiveChatThemeOverride();
+    }
   }, 1000);
 }
 
@@ -414,14 +462,28 @@ if (document.readyState === 'complete') {
   window.addEventListener('load', initializeLifecycle, { once: true });
 }
 
-document.addEventListener('yt-navigate-finish', () => {
-  removeOverlayDom();
-  if (playerFullscreenObserver) {
-    playerFullscreenObserver.disconnect();
-    playerFullscreenObserver = null;
+document.addEventListener('yt-navigate-start', () => {
+  if (typeof invalidateSignalCache === 'function') invalidateSignalCache();
+  const oldVid = currentVideoId || (typeof getVideoId === 'function' ? getVideoId() : null);
+  if (typeof markChatIframesStale === 'function' && oldVid) {
+    markChatIframesStale(oldVid);
   }
-  lastUrl = location.href;
-  setupPlayerFullscreenObserver();
+  removeOverlayDom();
+});
+
+document.addEventListener('yt-navigate-finish', () => {
+  const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+  handleVideoChange(newVid);
+});
+
+document.addEventListener('yt-page-data-updated', () => {
+  const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+  handleVideoChange(newVid);
+});
+
+window.addEventListener('popstate', () => {
+  const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+  handleVideoChange(newVid);
 });
 
 window.addEventListener('unload', cleanupAllListeners);

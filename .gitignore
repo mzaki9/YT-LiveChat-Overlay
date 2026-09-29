@@ -1,2 +1,5 @@
 /.agents
 skills-lock.json
+/.debug/
+/.playwright-mcp/
+/test-results/

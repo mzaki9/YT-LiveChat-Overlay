@@ -31,6 +31,7 @@
   border-radius: 16px;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   animation: fadeOut 0.1s ease forwards;
   border: 1px solid rgba(255, 255, 255, 0.12);
   will-change: transform, left, top;
@@ -373,6 +374,7 @@
   pointer-events: auto; /* Ensure it captures its own events */
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 #settings-panel.show {
@@ -510,3 +512,10 @@ html[data-avatars-enabled="false"] .chat-message:not(:first-child) {
   border-top: none; 
   margin-top: 3px; 
 }
+
+/* In fullscreen, hide native panels container if flexy is fullscreen so video is 100% full bleed */
+ytd-watch-flexy[fullscreen] #panels-full-bleed-container,
+ytd-watch-grid[fullscreen] #panels-full-bleed-container {
+  display: none !important;
+}
+

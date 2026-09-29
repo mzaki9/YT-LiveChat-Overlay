@@ -54,6 +54,12 @@ function debounce(func, wait) {
   let signalCacheKey = '';
   let signalCacheAt = 0;
 
+  function invalidateSignalCache() {
+    signalCache = null;
+    signalCacheKey = '';
+    signalCacheAt = 0;
+  }
+
   function getCachedSignal(name, compute) {
     const key = `${getVideoId() || ''}@${window.location.href}`;
     const now = Date.now();
@@ -128,19 +134,129 @@ function debounce(func, wait) {
   }
 
   function getIframeVideoId(iframe) {
+    if (!iframe) return null;
     const href = getIframeHref(iframe);
-    if (!href) return null;
-    try {
-      return new URL(href, window.location.origin).searchParams.get('v');
-    } catch {
-      return null;
+    if (href) {
+      try {
+        const v = new URL(href, window.location.origin).searchParams.get('v');
+        if (v) return v;
+      } catch {}
     }
+    try {
+      const win = iframe.contentWindow;
+      const winVideoId = win?.ytcfg?.get?.('VIDEO_ID') || win?.ytcfg?.data_?.VIDEO_ID;
+      if (typeof winVideoId === 'string' && winVideoId) return winVideoId;
+    } catch {}
+    const tagged = iframe.getAttribute('data-yt-overlay-video');
+    if (tagged) return tagged;
+    return null;
+  }
+
+  function markChatIframesStale(oldVideoId) {
+    if (!oldVideoId) return;
+    const iframes = document.querySelectorAll('iframe#chatframe, ytd-live-chat-frame iframe, iframe[src*="live_chat"], iframe[data-yt-overlay-chat="true"]');
+    iframes.forEach((iframe) => {
+      if (iframe.getAttribute('data-yt-overlay-owned') === 'true') {
+        try { iframe.src = 'about:blank'; } catch {}
+        iframe.remove();
+        return;
+      }
+      iframe.setAttribute('data-yt-overlay-video', oldVideoId);
+      const href = getIframeHref(iframe);
+      if (href && !href.includes('about:blank')) {
+        iframe.setAttribute('data-yt-overlay-stale-src', href);
+      }
+    });
+  }
+
+  function getPageContinuation() {
+    try {
+      const host = document.querySelector('ytd-live-chat-frame');
+      const hostCont = host?.data?.liveChatRenderer?.continuations?.[0]?.reloadContinuationData?.continuation;
+      if (hostCont) return hostCont;
+    } catch {}
+    try {
+      const flexy = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+      const flexyCont = flexy?.data?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer?.continuations?.[0]?.reloadContinuationData?.continuation;
+      if (flexyCont) return flexyCont;
+    } catch {}
+    try {
+      const initCont = window.ytInitialData?.contents?.twoColumnWatchNextResults?.conversationBar?.liveChatRenderer?.continuations?.[0]?.reloadContinuationData?.continuation;
+      if (initCont) return initCont;
+    } catch {}
+    return null;
+  }
+
+  function hasIframeReloadedForNewVideo(iframe, videoId) {
+    if (!iframe || !videoId) return false;
+    const currentHref = getIframeHref(iframe);
+    if (!currentHref || currentHref.includes('about:blank')) return false;
+
+    // Direct match by ?v= query parameter (live chat)
+    if (currentHref.includes(videoId)) return true;
+
+    // Check if the current continuation matches page's continuation for new video
+    const pageContinuation = getPageContinuation();
+    if (pageContinuation && currentHref.includes(pageContinuation)) return true;
+
+    // Check if URL has changed from the recorded stale URL
+    const staleSrc = iframe.getAttribute('data-yt-overlay-stale-src');
+    if (staleSrc && currentHref !== staleSrc) {
+      try {
+        const doc = iframe.contentDocument;
+        if (doc && doc.body && doc.body.children.length > 0) {
+          return true;
+        }
+      } catch {}
+    }
+    return false;
+  }
+
+  function checkAndRefreshNativeIframe(iframe, videoId) {
+    if (!iframe || !videoId) return false;
+    const taggedVideo = iframe.getAttribute('data-yt-overlay-video');
+    if (taggedVideo === videoId) {
+      return true;
+    }
+    if (hasIframeReloadedForNewVideo(iframe, videoId)) {
+      iframe.setAttribute('data-yt-overlay-video', videoId);
+      iframe.removeAttribute('data-yt-overlay-stale-src');
+      return true;
+    }
+    return false;
   }
 
   function isIframeForCurrentVideo(iframe, videoId) {
     if (!iframe || !videoId) return true;
+    if (checkAndRefreshNativeIframe(iframe, videoId)) return true;
+
+    const taggedVideoId = iframe.getAttribute('data-yt-overlay-video');
+    if (taggedVideoId) {
+      return taggedVideoId === videoId;
+    }
+
+    const staleSrc = iframe.getAttribute('data-yt-overlay-stale-src');
+    if (staleSrc) {
+      const currentHref = getIframeHref(iframe);
+      if (!currentHref || currentHref === staleSrc) return false;
+    }
+
     const iframeVideoId = getIframeVideoId(iframe);
-    return !iframeVideoId || iframeVideoId === videoId;
+    if (iframeVideoId) {
+      if (iframeVideoId === videoId) {
+        iframe.setAttribute('data-yt-overlay-video', videoId);
+        return true;
+      }
+      return false;
+    }
+
+    // Only on fresh initial page load (where it has never been stamped from a previous video)
+    if (isReplayChatIframe(iframe) || isLiveChatIframe(iframe)) {
+      iframe.setAttribute('data-yt-overlay-video', videoId);
+      return true;
+    }
+
+    return false;
   }
 
   function hasUnavailableChatDocument(iframe) {
@@ -178,26 +294,32 @@ function debounce(func, wait) {
   function getMoviePlayerLiveState() {
     const player = document.getElementById('movie_player');
     const data = player?.getVideoData?.();
+    const currentVideoId = getVideoId();
+    if (currentVideoId && data?.video_id && data.video_id !== currentVideoId) {
+      return null;
+    }
     if (typeof data?.isLive === 'boolean') return data.isLive;
-    if (typeof data?.isLiveContent === 'boolean') return data.isLiveContent;
     return null;
   }
 
   function getMoviePlayerIsLive() {
-    const player = document.getElementById('movie_player');
-    const data = player?.getVideoData?.();
-    return typeof data?.isLive === 'boolean' ? data.isLive : null;
+    return getMoviePlayerLiveState();
   }
 
   function getInitialPlayerResponseLiveState() {
     try {
+      // ytInitialPlayerResponse is written once by the initial page load and is
+      // never reassigned on SPA navigation: after changing videos it still
+      // describes the previous one (verified: live -> replay keeps
+      // {videoId, isLiveNow} of the old live stream). Ignore it then.
+      const responseVideoId = window.ytInitialPlayerResponse?.videoDetails?.videoId;
+      const videoId = getVideoId();
+      if (responseVideoId && videoId && responseVideoId !== videoId) return null;
+
       const details = window.ytInitialPlayerResponse?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails;
       if (typeof details?.isLiveNow === 'boolean') return details.isLiveNow;
       if (typeof window.ytInitialPlayerResponse?.videoDetails?.isLive === 'boolean') {
         return window.ytInitialPlayerResponse.videoDetails.isLive;
-      }
-      if (typeof window.ytInitialPlayerResponse?.videoDetails?.isLiveContent === 'boolean') {
-        return window.ytInitialPlayerResponse.videoDetails.isLiveContent;
       }
     } catch {}
     return null;
@@ -205,19 +327,20 @@ function debounce(func, wait) {
 
   function getInlinePlayerResponseLiveState() {
     return getCachedSignal('inlinePlayerResponseLive', () => {
+      const videoId = getVideoId();
       const scripts = document.querySelectorAll('script');
       for (const script of scripts) {
         const text = script.textContent || '';
         if (!text.includes('ytInitialPlayerResponse')) continue;
+        // Inline scripts belong to the document that was loaded first, so after
+        // an SPA navigation they still carry the previous video's verdict.
+        if (videoId && !text.includes(videoId)) continue;
 
         const isLiveNowMatch = text.match(/"isLiveNow":(true|false)/);
         if (isLiveNowMatch?.[1]) return isLiveNowMatch[1] === 'true';
 
-        const viewedLiveMatch = text.match(/"key":"is_viewed_live","value":"(True|False)"/);
-        if (viewedLiveMatch?.[1]) return viewedLiveMatch[1] === 'True';
-
-        const isLiveContentMatch = text.match(/"isLiveContent":(true|false)/);
-        if (isLiveContentMatch?.[1]) return isLiveContentMatch[1] === 'true';
+        const isLiveMatch = text.match(/"isLive":(true|false)/);
+        if (isLiveMatch?.[1]) return isLiveMatch[1] === 'true';
       }
       return null;
     });
@@ -226,9 +349,20 @@ function debounce(func, wait) {
   function hasReplayContinuationSignal() {
     return getCachedSignal('replayContinuation', () => {
       try {
+        const videoId = getVideoId();
         const scripts = document.querySelectorAll('script');
         for (const script of scripts) {
-          if ((script.textContent || '').includes('liveChatReplayContinuation')) return true;
+          const text = script.textContent || '';
+          if (
+            text.includes('liveChatReplayContinuation') ||
+            text.includes('Show chat replay') ||
+            text.includes('Live chat replay') ||
+            text.includes('Top chat replay') ||
+            text.includes('チャットのリプレイ')
+          ) {
+            if (videoId && text.includes('videoId') && !text.includes(videoId)) continue;
+            return true;
+          }
         }
       } catch {}
       return false;
@@ -237,14 +371,10 @@ function debounce(func, wait) {
 
   function isLiveBroadcast() {
     return getCachedSignal('liveBroadcast', () => {
+      // Order matters: signals that YouTube refreshes per video come first,
+      // page data that only exists for the initially loaded document last.
       const moviePlayerLive = getMoviePlayerLiveState();
       if (moviePlayerLive === true) return true;
-
-      const initialPlayerResponseLive = getInitialPlayerResponseLiveState();
-      if (initialPlayerResponseLive === true) return true;
-
-      const inlinePlayerResponseLive = getInlinePlayerResponseLiveState();
-      if (inlinePlayerResponseLive === true) return true;
 
       const watchFlexy = document.querySelector('ytd-watch-flexy');
       const watchGrid = document.querySelector('ytd-watch-grid');
@@ -253,6 +383,17 @@ function debounce(func, wait) {
       if (document.querySelector('.ytp-time-display.ytp-live, .ytp-live-badge.ytp-live-badge-is-livehead')) {
         return true;
       }
+
+      // Fresh negative verdict from the player API beats any page data left
+      // over from a previous video (live -> replay hop, same-document SPA).
+      if (moviePlayerLive === false) return false;
+
+      const initialLive = getInitialPlayerResponseLiveState();
+      if (initialLive !== null) return initialLive;
+
+      const inlineLive = getInlinePlayerResponseLiveState();
+      if (inlineLive !== null) return inlineLive;
+
       return false;
     });
   }
@@ -271,7 +412,7 @@ function debounce(func, wait) {
     const carouselItems = document.querySelectorAll('yt-video-metadata-carousel-view-model');
     for (const item of carouselItems) {
       const text = `${item.getAttribute('aria-label') || ''} ${item.innerText || ''}`.toLowerCase();
-      if (text.includes('chat replay') || text.includes('リプレイ')) {
+      if (text.includes('chat replay') || text.includes('リプレイ') || text.includes('rekaman live chat') || text.includes('rekaman chat')) {
         return true;
       }
     }
@@ -280,7 +421,8 @@ function debounce(func, wait) {
     const replayButtons = document.querySelectorAll(
       'button[aria-label*="chat replay" i], ' +
       'button[aria-label*="Show chat replay" i], ' +
-      'button[aria-label*="チャットのリプレイ" i]'
+      'button[aria-label*="チャットのリプレイ" i], ' +
+      'button[aria-label*="rekaman chat" i]'
     );
     for (const btn of replayButtons) {
       const label = [
@@ -290,18 +432,15 @@ function debounce(func, wait) {
         btn.getAttribute('data-tooltip-text'),
         btn.innerText
       ].join(' ').toLowerCase();
-      if (label.includes('replay') || label.includes('リプレイ')) {
+      if (label.includes('replay') || label.includes('リプレイ') || label.includes('rekaman')) {
         return true;
       }
     }
 
-    const isLive = getMoviePlayerLiveState();
-    if (isLive === false) {
-      const watchFlexy = document.querySelector('ytd-watch-flexy');
-      if (watchFlexy?.hasAttribute('should-stamp-chat')) return true;
-    }
+    const watchFlexy = document.querySelector('ytd-watch-flexy');
+    if (watchFlexy?.hasAttribute('should-stamp-chat')) return true;
 
-    // Check inline player response / ytInitialData for replay continuation
+    // Check inline player response / ytInitialData for replay continuation or replay title
     return hasReplayContinuationSignal();
   }
 
@@ -356,9 +495,10 @@ function debounce(func, wait) {
     'yt-video-metadata-carousel-view-model button',
     'button[aria-label*="Show chat replay" i]',
     'button[aria-label*="chat replay" i]',
-    'button[aria-label*="チャットのリプレイ" i]'
+    'button[aria-label*="チャットのリプレイ" i]',
+    'ytd-live-chat-frame #show-hide-button button',
+    '#chat-container #show-hide-button button'
   ];
-
 
   function getButtonLabelText(element) {
     const carouselText = element.closest('yt-video-metadata-carousel-view-model')?.innerText || '';
@@ -366,7 +506,13 @@ function debounce(func, wait) {
   }
 
   function isChatLabel(label) {
-    return label.includes('replay') || label.includes('リプレイ') || label.includes('open panel');
+    return label.includes('replay') ||
+      label.includes('リプレイ') ||
+      label.includes('chat') ||
+      label.includes('チャット') ||
+      label.includes('open panel') ||
+      label.includes('buka panel') ||
+      label.includes('rekaman');
   }
 
   function isElementVisible(element) {
@@ -464,7 +610,9 @@ function debounce(func, wait) {
     if (isLiveBroadcast() || isYouTubeLiveNow()) return false;
     const host = document.querySelector('ytd-live-chat-frame');
     const isFrameCollapsed = host?.collapsed === true || (host && window.getComputedStyle(host).display === 'none');
-    if (!isFrameCollapsed && isNativeChatMarkedExpanded() && !isNativeChatIframeBlank() && isNativeChatHostVisible()) {
+    const currentIframe = getLiveChatIframe();
+    const isFrameValidForCurrent = currentIframe && isIframeForCurrentVideo(currentIframe, getVideoId());
+    if (!isFrameCollapsed && isNativeChatMarkedExpanded() && isFrameValidForCurrent && !isNativeChatIframeBlank() && isNativeChatHostVisible()) {
       return false;
     }
 
@@ -505,8 +653,11 @@ function debounce(func, wait) {
     const videoId = getVideoId();
     if (!videoId) return null;
     if (!isYouTubeLiveNow()) return null;
-    const nativeIframe = getLiveChatIframe();
-    if (nativeIframe && isReplayChatIframe(nativeIframe)) return null;
+    // Note: a replay document sitting in the native frame is deliberately not
+    // treated as a blocker. isYouTubeLiveNow() already ruled out VODs, so on a
+    // live video such a document belongs to the previous video (its URL is
+    // continuation-based and carries no ?v=). Bailing out there left the overlay
+    // empty after a live -> replay -> live hop.
     // Reuse YouTube's own live chat document when one is already running. A second,
     // overlay-owned copy keeps receiving and rendering every message behind the
     // scenes (~33 MB heap, ~70% of chat script time - see docs/perf-findings.md).
@@ -540,19 +691,31 @@ function debounce(func, wait) {
   function detectChatMode(currentIframe) {
     const videoId = getVideoId();
     if (!videoId) return 'none';
+    // Chat URLs are continuation-based and carry no ?v=, so a document kept
+    // from the previous video is indistinguishable from this video's by URL
+    // alone. Settle live-vs-replay from the page first, then only let a chat
+    // document confirm that verdict.
+    const liveNow = isYouTubeLiveNow();
     const iframe = currentIframe || getLiveChatIframe();
     if (iframe && isIframeForCurrentVideo(iframe, videoId)) {
-      if (isReplayChatIframe(iframe)) return 'archive';
-      if (isLiveChatIframe(iframe) || iframe.getAttribute('data-yt-overlay-owned') === 'true') return 'live';
+      if (isReplayChatIframe(iframe)) {
+        // live -> replay -> live: the previous video's replay chat must not
+        // mask a video that is live now.
+        if (!liveNow) return 'archive';
+      } else if (isLiveChatIframe(iframe) || iframe.getAttribute('data-yt-overlay-owned') === 'true') {
+        // Symmetric guard: only believe a live_chat document while the player
+        // does not explicitly report this video as a VOD.
+        if (getMoviePlayerIsLive() !== false) return 'live';
+      }
     }
+    if (liveNow) return 'live';
     if (resolveArchiveChatSource(currentIframe)) return 'archive';
-    if (isYouTubeLiveNow()) return 'live';
+    if (hasArchiveReplaySignal()) return 'archive';
     if (hasArchiveNativeOpenControl()) {
       const isLive = getMoviePlayerIsLive();
       if (isLive === false && hasArchiveReplaySignal()) return 'archive';
       if (isLive === true) return 'live';
     }
-    if (hasArchiveReplaySignal()) return 'archive';
     if (resolveLiveChatSource(currentIframe)) return 'live';
     return 'none';
   }

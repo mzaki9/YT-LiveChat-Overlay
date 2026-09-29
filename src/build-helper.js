@@ -108,6 +108,16 @@ function buildUnpacked(target) {
     copyFileToDir(file, outputDir);
   }
 
+  if (target !== 'firefox') {
+    const chromeManifestPath = path.join(outputDir, 'manifest.json');
+    if (fs.existsSync(chromeManifestPath)) {
+      const chromeManifest = JSON.parse(fs.readFileSync(chromeManifestPath, 'utf8'));
+      chromeManifest.background = { service_worker: 'js/background.js' };
+      delete chromeManifest.browser_specific_settings;
+      fs.writeFileSync(chromeManifestPath, JSON.stringify(chromeManifest, null, 2));
+    }
+  }
+
   return outputDir;
 }
 

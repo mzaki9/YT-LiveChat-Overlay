@@ -85,11 +85,13 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   const savedBlur = rawSavedBlur !== null ? Number(rawSavedBlur) : 8;
   blurSlider.value = savedBlur;
   container.style.backdropFilter = `blur(${savedBlur}px)`;
+  container.style.webkitBackdropFilter = `blur(${savedBlur}px)`;
 
   blurSlider.addEventListener("input", (event) => {
     event.stopPropagation();
     const value = event.target.value;
     container.style.backdropFilter = `blur(${value}px)`;
+    container.style.webkitBackdropFilter = `blur(${value}px)`;
     localStorage.setItem("chatOverlayBlur", value);
   });
 
@@ -109,18 +111,26 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   const savedHideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
   if (inputToggle) inputToggle.checked = savedHideInput;
 
+  const stealthReplayToggle = settingsPanel.querySelector("#hide-native-replay-toggle");
+  const savedStealthReplay = isStealthReplayEnabled();
+  if (stealthReplayToggle) stealthReplayToggle.checked = savedStealthReplay;
+
   applyTickerHideStyle(savedHideTicker, savedHideHeader, savedAutoHideHeader, savedHideInput);
+  applyStealthReplayStyle(savedStealthReplay);
 
   function syncThemeStyles() {
     const hideTicker = tickerToggle.checked;
     const hideHeader = headerToggle.checked;
     const autoHideHeader = autoHideHeaderToggle.checked;
     const hideInput = inputToggle ? inputToggle.checked : true;
+    const hideStealthReplay = stealthReplayToggle ? stealthReplayToggle.checked : true;
     localStorage.setItem("chatOverlayHideTicker", hideTicker);
     localStorage.setItem("chatOverlayHideHeader", hideHeader);
     localStorage.setItem("chatOverlayAutoHideHeader", autoHideHeader);
     localStorage.setItem("chatOverlayHideInput", hideInput);
+    localStorage.setItem("chatOverlayStealthReplay", hideStealthReplay);
     applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader, hideInput);
+    applyStealthReplayStyle(hideStealthReplay);
   }
 
   tickerToggle.addEventListener("change", (event) => {
@@ -140,6 +150,13 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
 
   if (inputToggle) {
     inputToggle.addEventListener("change", (event) => {
+      event.stopPropagation();
+      syncThemeStyles();
+    });
+  }
+
+  if (stealthReplayToggle) {
+    stealthReplayToggle.addEventListener("change", (event) => {
       event.stopPropagation();
       syncThemeStyles();
     });
@@ -260,6 +277,20 @@ function createSettingsPanelElement() {
   inputRow.appendChild(inputLabel);
   inputRow.appendChild(inputInput);
   panel.appendChild(inputRow);
+
+  // Hide native replay sidebar toggle
+  const stealthReplayRow = document.createElement("div");
+  stealthReplayRow.className = "toggle-control";
+  const stealthReplayLabel = document.createElement("label");
+  stealthReplayLabel.textContent = "Hide native replay sidebar";
+  stealthReplayLabel.htmlFor = "hide-native-replay-toggle";
+  const stealthReplayInput = document.createElement("input");
+  stealthReplayInput.type = "checkbox";
+  stealthReplayInput.id = "hide-native-replay-toggle";
+  stealthReplayInput.checked = true;
+  stealthReplayRow.appendChild(stealthReplayLabel);
+  stealthReplayRow.appendChild(stealthReplayInput);
+  panel.appendChild(stealthReplayRow);
 
   return panel;
 }
@@ -407,6 +438,7 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
     #reaction-control-panel-overlay,
     #reactions,
     yt-live-chat-reaction-control-panel-renderer,
+    yt-live-chat-restricted-participation-renderer,
     yt-live-chat-renderer > #separator {
       display: none !important;
     }
@@ -417,25 +449,72 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
   ` : "";
 
   return `
+    html,
     body {
       background-color: transparent !important;
+      background: transparent !important;
     }
     yt-live-chat-app {
       --yt-live-chat-background-color: transparent !important;
+      --yt-live-chat-action-panel-background-color: transparent !important;
+      --yt-live-chat-secondary-background-color: transparent !important;
+      --yt-live-chat-toast-background-color: rgba(33, 33, 33, 0.9) !important;
+      --yt-live-chat-mode-change-background-color: transparent !important;
       --yt-spec-base-background: transparent !important;
+      --yt-spec-general-background-a: transparent !important;
+      --yt-spec-general-background-b: transparent !important;
       --yt-sys-color-baseline--base-background: transparent !important;
+      --yt-sys-color-baseline--surface: transparent !important;
+      --yt-sys-color-baseline--surface-variant: transparent !important;
       --yt-sys-color-baseline--text-primary: #f1f1f1 !important;
       --yt-sys-color-baseline--text-secondary: #aaa !important;
+      --yt-live-chat-primary-text-color: #f1f1f1 !important;
+      --yt-live-chat-secondary-text-color: #aaa !important;
+      background-color: transparent !important;
+      background: transparent !important;
     }
     yt-live-chat-renderer,
+    yt-live-chat-renderer[is-replay],
     yt-live-chat-item-list-renderer,
+    yt-live-chat-header-renderer,
     #item-scroller,
-    #items {
+    #item-list,
+    #items,
+    #contents,
+    #chat,
+    #loading,
+    yt-live-chat-ninja-message-renderer,
+    ytd-engagement-panel-section-list-renderer,
+    #content.ytd-engagement-panel-section-list-renderer,
+    #panel-pages,
+    #content-pages {
       background-color: transparent !important;
+      background: transparent !important;
+    }
+    #card.yt-live-chat-viewer-engagement-message-renderer {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #f1f1f1 !important;
     }
     #container.yt-live-chat-restricted-participation-renderer {
       background: transparent !important;
       color: rgba(235, 232, 232, 0.7) !important;
+    }
+    yt-live-chat-text-message-renderer #message,
+    yt-live-chat-text-message-renderer #author-name,
+    yt-live-chat-header-renderer,
+    #title.yt-live-chat-header-renderer,
+    #view-selector yt-dropdown-menu,
+    #trigger.tp-yt-paper-menu-button {
+      color: #f1f1f1 !important;
+    }
+    yt-live-chat-text-message-renderer #timestamp {
+      color: #aaa !important;
+    }
+    yt-live-chat-header-renderer yt-icon,
+    yt-live-chat-header-renderer yt-icon-button {
+      color: #f1f1f1 !important;
+      fill: #f1f1f1 !important;
     }
     ${hideTicker ? "yt-live-chat-ticker-renderer { display: none !important; }" : ""}
     ${headerRules}
@@ -444,38 +523,96 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
 }
 
 function injectChatIframeThemeOverride(iframe) {
+  if (!iframe) return false;
   try {
     const doc = iframe.contentDocument;
-    if (!doc) return;
+    if (!doc) return false;
 
-    const existing = doc.getElementById("yt-overlay-theme-override");
-    if (existing) return;
+    const root = doc.head || doc.documentElement;
+    if (!root) return false;
 
     const hideTicker = localStorage.getItem("chatOverlayHideTicker") === "true";
     const hideHeader = localStorage.getItem("chatOverlayHideHeader") === "true";
     const autoHideHeader = localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
     const hideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
-    const style = doc.createElement("style");
-    style.id = "yt-overlay-theme-override";
-    style.textContent = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
-    doc.head?.appendChild(style) || doc.documentElement?.appendChild(style);
-  } catch {}
+    const css = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
+
+    let style = doc.getElementById("yt-overlay-theme-override");
+    if (!style) {
+      style = doc.createElement("style");
+      style.id = "yt-overlay-theme-override";
+      style.textContent = css;
+      root.appendChild(style);
+      return true;
+    }
+    if (style.textContent !== css) {
+      style.textContent = css;
+      return true;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+let themeOverrideWatcherTimer = null;
+
+function ensureActiveChatThemeOverride() {
+  const target = activeChatIframe || document.querySelector("#chat-iframe-container iframe, iframe[data-yt-overlay-chat='true']");
+  if (!target || !target.isConnected) return false;
+  return injectChatIframeThemeOverride(target);
+}
+
+function startThemeOverrideWatcher(iframe) {
+  if (themeOverrideWatcherTimer) {
+    clearInterval(themeOverrideWatcherTimer);
+    themeOverrideWatcherTimer = null;
+  }
+  let ticks = 0;
+  themeOverrideWatcherTimer = setInterval(() => {
+    ticks++;
+    const target = iframe || activeChatIframe || document.querySelector("#chat-iframe-container iframe, iframe[data-yt-overlay-chat='true']");
+    if (!target || !target.isConnected) {
+      clearInterval(themeOverrideWatcherTimer);
+      themeOverrideWatcherTimer = null;
+      return;
+    }
+    injectChatIframeThemeOverride(target);
+    if (ticks >= 30) {
+      clearInterval(themeOverrideWatcherTimer);
+      themeOverrideWatcherTimer = null;
+    }
+  }, 500);
 }
 
 function applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader = true, hideInput = true) {
-  document.querySelectorAll("iframe[data-yt-overlay-chat='true']").forEach((iframe) => {
+  const iframes = new Set(document.querySelectorAll("iframe[data-yt-overlay-chat='true']"));
+  if (activeChatIframe) iframes.add(activeChatIframe);
+  iframes.forEach((iframe) => {
     try {
       const doc = iframe.contentDocument;
       if (!doc) return;
+      const root = doc.head || doc.documentElement;
+      if (!root) return;
       let style = doc.getElementById("yt-overlay-theme-override");
       if (!style) {
         style = doc.createElement("style");
         style.id = "yt-overlay-theme-override";
-        doc.head?.appendChild(style) || doc.documentElement?.appendChild(style);
+        root.appendChild(style);
       }
       style.textContent = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
     } catch {}
   });
+}
+
+function isStealthReplayEnabled() {
+  return localStorage.getItem("chatOverlayStealthReplay") !== "false";
+}
+
+function applyStealthReplayStyle() {
+  if (document.documentElement.hasAttribute("data-yt-overlay-stealth-replay")) {
+    document.documentElement.removeAttribute("data-yt-overlay-stealth-replay");
+  }
 }
 
 function isManagedLiveIframe(iframe) {
@@ -505,18 +642,6 @@ function applyChatIframeStyle(iframe) {
   iframe.setAttribute("allowtransparency", "true");
 }
 
-function syncBorrowedIframeSrcWithDocumentHref(iframe) {
-  let docHref = "";
-  try {
-    docHref = iframe.contentDocument?.location?.href || "";
-  } catch {}
-  if (!docHref || docHref.includes("about:blank")) return;
-
-  const currentSrc = iframe.getAttribute("src") || iframe.src || "";
-  if (currentSrc && !currentSrc.includes("about:blank")) return;
-  iframe.src = docHref;
-}
-
 function rememberBorrowedIframe(iframe, container) {
   if (borrowedIframeRestoreTarget || iframe.parentNode === container) return;
   const placeholder = document.createComment("yt-overlay-borrowed-chat-anchor");
@@ -538,7 +663,6 @@ function rememberBorrowedIframe(iframe, container) {
       backgroundColor: iframe.style.backgroundColor,
     },
   };
-  syncBorrowedIframeSrcWithDocumentHref(iframe);
 }
 
 function restoreBorrowedIframe(iframe) {
@@ -614,6 +738,12 @@ function restoreIframeToNativeHost(iframe) {
   return true;
 }
 
+function shouldUpgradeToNativeChat() {
+  if (!isOverlayVisible) return false;
+  if (activeChatSourceKind !== "live_direct") return false;
+  return Boolean(findNativeLiveChatIframe(activeChatIframe));
+}
+
 function attachChatSource(iframeContainer) {
   if (!iframeContainer || !iframeContainer.isConnected) {
     debugState("attachChatSource:detached container", {
@@ -623,25 +753,38 @@ function attachChatSource(iframeContainer) {
     return false;
   }
 
+  const currentVideoId = getVideoId();
+  if (activeChatIframe && !isIframeForCurrentVideo(activeChatIframe, currentVideoId)) {
+    debugState("attachChatSource:detaching stale iframe", {
+      activeVideo: activeChatIframe.getAttribute("data-yt-overlay-video"),
+      currentVideoId,
+    });
+    detachChatSource();
+  }
+
   const duplicateIframes = iframeContainer.querySelectorAll('iframe[data-yt-overlay-chat="true"]');
   duplicateIframes.forEach((iframe) => {
     if (iframe !== activeChatIframe) iframe.remove();
   });
 
   const mode = detectChatMode(activeChatIframe);
-  debugState("attachChatSource:start", {
+  debugState("attachChatSource:start", () => ({
     mode,
     videoId: getVideoId(),
     activeHref: getIframeHref(activeChatIframe),
     nativeHref: getIframeHref(getLiveChatIframe()),
     containerConnected: iframeContainer?.isConnected,
-  });
+  }));
   if (mode === "archive" && !resolveArchiveChatSource(activeChatIframe)) {
     debugState("attachChatSource:openArchiveNativeChatPanel", {});
     openArchiveNativeChatPanel();
   }
   const source = mode === "archive" ? resolveArchiveChatSource(activeChatIframe) : resolveLiveChatSource(activeChatIframe);
   if (!source) {
+    if (activeChatIframe && activeChatIframe.parentElement === iframeContainer && isReplayChatIframe(activeChatIframe)) {
+      debugState("attachChatSource:pending replay reload", { href: getIframeHref(activeChatIframe) });
+      return true;
+    }
     debugState("attachChatSource:no source", {
       mode,
       videoId: getVideoId(),
@@ -655,9 +798,10 @@ function attachChatSource(iframeContainer) {
     url: source.url || getIframeHref(source.iframe),
   });
 
-  const nextIframe = source.kind === "archive_borrow" ? source.iframe : (getReusableLiveIframe(source) || createManagedLiveIframe(source));
+  const nextIframe = isBorrowedSourceKind(source.kind) ? source.iframe : (getReusableLiveIframe(source) || createManagedLiveIframe(source));
   if (activeChatIframe === nextIframe && nextIframe.parentElement === iframeContainer) {
     debugState("attachChatSource:reuse", { href: getIframeHref(nextIframe) });
+    injectChatIframeThemeOverride(activeChatIframe);
     return true;
   }
 
@@ -665,14 +809,23 @@ function attachChatSource(iframeContainer) {
   activeChatIframe = nextIframe;
   activeChatSourceKind = source.kind;
   activeChatIframe.setAttribute("data-yt-overlay-chat", "true");
+  // Chat documents have no ?v= in their URL, so remember which video this
+  // document was attached for: after an SPA hop it must no longer be trusted.
+  activeChatIframe.setAttribute("data-yt-overlay-video", getVideoId() || "");
+  activeChatIframe.removeAttribute("data-yt-overlay-stale-src");
 
-  if (source.kind === "archive_borrow") {
+  if (isBorrowedSourceKind(source.kind)) {
     rememberBorrowedIframe(activeChatIframe, iframeContainer);
   }
 
   applyChatIframeStyle(activeChatIframe);
   iframeContainer.appendChild(activeChatIframe);
   injectChatIframeThemeOverride(activeChatIframe);
+  startThemeOverrideWatcher(activeChatIframe);
+  activeChatIframe.addEventListener("load", () => {
+    injectChatIframeThemeOverride(activeChatIframe);
+    startThemeOverrideWatcher(activeChatIframe);
+  }, { once: true });
   debugState("attachChatSource:appended", {
     kind: activeChatSourceKind,
     childCount: iframeContainer.childElementCount,
@@ -685,17 +838,31 @@ function attachChatSource(iframeContainer) {
 
 function isActiveChatIframeLoaded() {
   const href = getIframeHref(activeChatIframe);
-  return Boolean(activeChatIframe?.isConnected && href && !href.includes("about:blank"));
+  return Boolean(activeChatIframe?.isConnected && href && !href.includes("about:blank") && isIframeForCurrentVideo(activeChatIframe, getVideoId()));
 }
 
 function detachChatSource() {
+  if (themeOverrideWatcherTimer) {
+    clearInterval(themeOverrideWatcherTimer);
+    themeOverrideWatcherTimer = null;
+  }
   if (!activeChatIframe) return;
 
   activeChatIframe.removeAttribute("data-yt-overlay-chat");
-  if (activeChatSourceKind === "archive_borrow") {
+  if (isBorrowedSourceKind(activeChatSourceKind)) {
+    const currentSrc = getIframeHref(activeChatIframe);
+    if (currentSrc && !currentSrc.includes("about:blank")) {
+      activeChatIframe.setAttribute("data-yt-overlay-stale-src", currentSrc);
+    }
+    const currentVid = activeChatIframe.getAttribute("data-yt-overlay-video") || getVideoId();
+    if (currentVid) {
+      activeChatIframe.setAttribute("data-yt-overlay-video", currentVid);
+    }
     const restored = restoreBorrowedIframe(activeChatIframe) || restoreIframeToNativeHost(activeChatIframe);
     if (!restored) queueRestoreToNativeHost(activeChatIframe);
   } else {
+    activeChatIframe.removeAttribute("data-yt-overlay-video");
+    activeChatIframe.removeAttribute("data-yt-overlay-stale-src");
     activeChatIframe.onload = null;
     activeChatIframe.onerror = null;
     try {
@@ -710,7 +877,7 @@ function detachChatSource() {
 
 function toggleOverlayChat(overlayChatContainer, iframeContainer, toggleButton) {
   isOverlayVisible = !isOverlayVisible;
-  debugState("toggleOverlayChat", { visible: isOverlayVisible, videoId: getVideoId(), mode: detectChatMode(activeChatIframe) });
+  debugState("toggleOverlayChat", () => ({ visible: isOverlayVisible, videoId: getVideoId(), mode: detectChatMode(activeChatIframe) }));
   overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
   overlayChatContainer.classList.toggle("show", isOverlayVisible);
   toggleButton.title = isOverlayVisible ? "Hide Chat" : "Show Chat";
@@ -718,6 +885,7 @@ function toggleOverlayChat(overlayChatContainer, iframeContainer, toggleButton) 
 
   if (isOverlayVisible) {
     attachChatSource(iframeContainer);
+    ensureActiveChatThemeOverride();
   } else {
     detachChatSource();
   }
@@ -733,6 +901,7 @@ function initializeOverlayState(overlayChatContainer) {
   const rawSavedBlur = localStorage.getItem("chatOverlayBlur");
   const blurVal = rawSavedBlur !== null ? Number(rawSavedBlur) : 8;
   overlayChatContainer.style.backdropFilter = `blur(${blurVal}px)`;
+  overlayChatContainer.style.webkitBackdropFilter = `blur(${blurVal}px)`;
   log("Overlay state initialized with native chat iframe source");
 }
 
