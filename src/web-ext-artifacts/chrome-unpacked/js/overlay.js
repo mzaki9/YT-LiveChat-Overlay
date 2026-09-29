@@ -430,8 +430,6 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
   }
 
   const inputRules = hideInput ? `
-    #action-panel,
-    #panel-pages,
     #input-panel,
     yt-live-chat-message-input-renderer,
     yt-reaction-control-panel-overlay-renderer,
@@ -479,7 +477,7 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
     yt-live-chat-header-renderer,
     #item-scroller,
     #item-list,
-    #items,
+    #item-list #items,
     #contents,
     #chat,
     #loading,
@@ -516,10 +514,341 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
       color: #f1f1f1 !important;
       fill: #f1f1f1 !important;
     }
+
+    /* Banner manager and banner renderer */
+    yt-live-chat-banner-manager {
+      pointer-events: auto !important;
+      z-index: 100 !important;
+    }
+    yt-live-chat-banner-renderer {
+      background: rgba(28, 28, 28, 0.92) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 8px !important;
+      color: #f1f1f1 !important;
+      pointer-events: auto !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      margin: 4px 6px !important;
+    }
+    yt-live-chat-banner-header-renderer {
+      color: #f1f1f1 !important;
+      pointer-events: auto !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+    yt-live-chat-banner-header-renderer #title,
+    yt-live-chat-banner-header-renderer yt-formatted-string {
+      color: #f1f1f1 !important;
+    }
+    yt-live-chat-banner-header-renderer yt-button-renderer,
+    yt-live-chat-banner-header-renderer button,
+    yt-live-chat-banner-header-renderer yt-button-shape {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+    yt-live-chat-banner-header-renderer yt-icon {
+      color: #f1f1f1 !important;
+      fill: #f1f1f1 !important;
+    }
+
+    /* Action panel & Polls */
+    #action-panel,
+    yt-live-chat-action-panel-renderer {
+      background: transparent !important;
+      pointer-events: auto !important;
+    }
+    yt-live-chat-poll-renderer {
+      background: rgba(28, 28, 28, 0.92) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 8px !important;
+      color: #f1f1f1 !important;
+      pointer-events: auto !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+      margin: 4px 6px !important;
+    }
+    yt-live-chat-poll-renderer #question,
+    yt-live-chat-poll-renderer #choice-text,
+    yt-live-chat-poll-renderer yt-formatted-string {
+      color: #f1f1f1 !important;
+    }
+
+    /* Dropdown menus & popup containers */
+    tp-yt-iron-dropdown,
+    iron-dropdown,
+    ytd-menu-popup-renderer,
+    tp-yt-paper-dialog,
+    yt-sheet-view-model,
+    .yt-overlay-banner-menu {
+      background-color: rgba(28, 28, 28, 0.96) !important;
+      background: rgba(28, 28, 28, 0.96) !important;
+      color: #f1f1f1 !important;
+      border-radius: 8px !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7) !important;
+      pointer-events: auto !important;
+      z-index: 2147483647 !important;
+    }
+    ytd-menu-popup-renderer tp-yt-paper-listbox,
+    ytd-menu-popup-renderer #items,
+    .yt-overlay-banner-menu tp-yt-paper-listbox {
+      background-color: rgba(28, 28, 28, 0.96) !important;
+      background: rgba(28, 28, 28, 0.96) !important;
+      color: #f1f1f1 !important;
+      border-radius: 8px !important;
+      padding: 4px 0 !important;
+    }
+    ytd-menu-service-item-renderer,
+    ytd-menu-navigation-item-renderer,
+    tp-yt-paper-item,
+    .yt-overlay-banner-menu-item {
+      color: #f1f1f1 !important;
+      background: transparent !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      font-size: 13px !important;
+      min-height: 36px !important;
+      padding: 0 14px !important;
+      display: flex !important;
+      align-items: center !important;
+      transition: background-color 0.15s ease !important;
+    }
+    ytd-menu-service-item-renderer:hover,
+    ytd-menu-navigation-item-renderer:hover,
+    tp-yt-paper-item:hover,
+    .yt-overlay-banner-menu-item:hover {
+      background-color: rgba(255, 255, 255, 0.12) !important;
+    }
+    ytd-menu-service-item-renderer yt-icon,
+    ytd-menu-navigation-item-renderer yt-icon,
+    ytd-menu-service-item-renderer yt-formatted-string,
+    tp-yt-paper-item yt-formatted-string,
+    .yt-overlay-banner-menu-item span {
+      color: #f1f1f1 !important;
+      fill: #f1f1f1 !important;
+    }
+
+    /* Tooltips */
+    tp-yt-paper-tooltip,
+    yt-tooltip-renderer,
+    #tooltip.tp-yt-paper-tooltip {
+      pointer-events: none !important;
+      background-color: rgba(33, 33, 33, 0.95) !important;
+      color: #f1f1f1 !important;
+      border-radius: 4px !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      font-size: 11px !important;
+      z-index: 2147483647 !important;
+    }
+
+    /* Custom banner controls & dismissed state */
+    .yt-overlay-banner-close-btn {
+      background: transparent !important;
+      border: none !important;
+      color: #aaa !important;
+      font-size: 15px !important;
+      line-height: 1 !important;
+      padding: 4px 6px !important;
+      margin-left: 4px !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      border-radius: 50% !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: color 0.15s ease, background-color 0.15s ease !important;
+    }
+    .yt-overlay-banner-close-btn:hover {
+      color: #fff !important;
+      background-color: rgba(255, 255, 255, 0.15) !important;
+    }
+    .yt-overlay-dismissed {
+      display: none !important;
+    }
     ${hideTicker ? "yt-live-chat-ticker-renderer { display: none !important; }" : ""}
     ${headerRules}
     ${inputRules}
   `;
+}
+
+function setupChatIframeBannerInteractions(doc) {
+  if (!doc || doc._ytOverlayBannerInteractionsInit) return;
+  doc._ytOverlayBannerInteractionsInit = true;
+
+  function closeAllTooltips() {
+    try {
+      const tooltips = doc.querySelectorAll("tp-yt-paper-tooltip, yt-tooltip-renderer, #tooltip");
+      tooltips.forEach((t) => {
+        t.style.setProperty("display", "none", "important");
+        if (typeof t.hide === "function") t.hide();
+      });
+    } catch {}
+  }
+
+  function dismissActiveBanner() {
+    const banners = doc.querySelectorAll("yt-live-chat-banner-renderer, yt-live-chat-banner-manager, #live-chat-banner");
+    banners.forEach((b) => {
+      b.classList.add("yt-overlay-dismissed");
+      b.style.setProperty("display", "none", "important");
+    });
+    closeAllTooltips();
+    closeCustomBannerMenu();
+  }
+
+  function dismissActivePoll() {
+    const polls = doc.querySelectorAll("yt-live-chat-poll-renderer, #action-panel, yt-live-chat-banner-poll-renderer");
+    polls.forEach((p) => {
+      p.classList.add("yt-overlay-dismissed");
+      p.style.setProperty("display", "none", "important");
+    });
+    closeAllTooltips();
+    closeCustomBannerMenu();
+  }
+
+  function toggleBannerCollapse() {
+    const banner = doc.querySelector("yt-live-chat-banner-renderer");
+    if (banner) {
+      if (typeof banner.toggleBanner === "function") {
+        banner.toggleBanner();
+      } else if (typeof banner.collapsed === "boolean") {
+        banner.collapsed = !banner.collapsed;
+      } else {
+        const isCollapsed = banner.hasAttribute("collapsed");
+        if (isCollapsed) {
+          banner.removeAttribute("collapsed");
+        } else {
+          banner.setAttribute("collapsed", "");
+        }
+      }
+    }
+    closeAllTooltips();
+    closeCustomBannerMenu();
+  }
+
+  function closeCustomBannerMenu() {
+    const existing = doc.querySelector(".yt-overlay-banner-menu");
+    if (existing) existing.remove();
+  }
+
+  function showCustomBannerMenu(targetBtn) {
+    const existing = doc.querySelector(".yt-overlay-banner-menu");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    closeAllTooltips();
+
+    const menu = doc.createElement("div");
+    menu.className = "yt-overlay-banner-menu";
+
+    function createMenuSvg(pathD) {
+      const svg = createSvgElement("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "currentColor" });
+      const path = createSvgElement("path", { d: pathD });
+      svg.appendChild(path);
+      return svg;
+    }
+
+    const hasPoll = Boolean(doc.querySelector("yt-live-chat-poll-renderer, #action-panel yt-live-chat-poll-renderer, [class*='poll']"));
+    const items = [
+      {
+        createIcon: () => createMenuSvg("M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"),
+        label: "Close pinned chat",
+        action: dismissActiveBanner,
+      },
+      ...(hasPoll ? [{
+        createIcon: () => createMenuSvg("M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"),
+        label: "Close polling",
+        action: dismissActivePoll,
+      }] : []),
+      {
+        createIcon: () => createMenuSvg("M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"),
+        label: "Collapse / expand banner",
+        action: toggleBannerCollapse,
+      },
+      {
+        createIcon: () => createMenuSvg("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"),
+        label: "Close all tooltips",
+        action: closeAllTooltips,
+      },
+    ];
+
+    items.forEach((it) => {
+      const itemEl = doc.createElement("div");
+      itemEl.className = "yt-overlay-banner-menu-item";
+      const iconSpan = doc.createElement("span");
+      iconSpan.style.cssText = "display:inline-flex;align-items:center;margin-right:8px;opacity:0.85;";
+      iconSpan.appendChild(it.createIcon());
+      const labelSpan = doc.createElement("span");
+      labelSpan.textContent = it.label;
+      itemEl.appendChild(iconSpan);
+      itemEl.appendChild(labelSpan);
+      itemEl.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        it.action();
+        closeCustomBannerMenu();
+      });
+      menu.appendChild(itemEl);
+    });
+
+    const rect = targetBtn.getBoundingClientRect();
+    const docWidth = doc.documentElement.clientWidth || doc.body.clientWidth || 300;
+    menu.style.position = "absolute";
+    menu.style.top = `${Math.max(4, rect.bottom + 4)}px`;
+    menu.style.right = `${Math.max(8, docWidth - rect.right)}px`;
+
+    doc.body.appendChild(menu);
+  }
+
+  doc.addEventListener("click", (e) => {
+    closeAllTooltips();
+
+    const clickedMenu = e.target.closest(".yt-overlay-banner-menu");
+    if (!clickedMenu) {
+      closeCustomBannerMenu();
+    }
+
+    const bannerBtn = e.target.closest(
+      "yt-button-renderer.yt-live-chat-banner-header-renderer, yt-live-chat-banner-header-renderer button, yt-live-chat-banner-header-renderer yt-button-shape"
+    );
+    if (bannerBtn && !bannerBtn.classList.contains("yt-overlay-banner-close-btn")) {
+      e.stopPropagation();
+      showCustomBannerMenu(bannerBtn);
+    }
+  }, true);
+
+  function ensureBannerControls() {
+    const headers = doc.querySelectorAll("yt-live-chat-banner-header-renderer");
+    headers.forEach((header) => {
+      if (header.querySelector(".yt-overlay-banner-close-btn")) return;
+      const closeBtn = doc.createElement("button");
+      closeBtn.className = "yt-overlay-banner-close-btn";
+      closeBtn.setAttribute("type", "button");
+      closeBtn.setAttribute("title", "Close banner");
+      closeBtn.setAttribute("aria-label", "Close banner");
+      const closeSvg = createSvgElement("svg", { viewBox: "0 0 24 24", width: "14", height: "14", fill: "currentColor" });
+      const closePath = createSvgElement("path", { d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" });
+      closeSvg.appendChild(closePath);
+      closeBtn.appendChild(closeSvg);
+      closeBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+        dismissActiveBanner();
+      });
+      header.appendChild(closeBtn);
+    });
+  }
+
+  ensureBannerControls();
+
+  const observer = new MutationObserver(() => {
+    ensureBannerControls();
+  });
+  if (doc.body || doc.documentElement) {
+    observer.observe(doc.body || doc.documentElement, {
+      childList: true,
+      subtree: true,
+    });
+  }
 }
 
 function injectChatIframeThemeOverride(iframe) {
@@ -531,10 +860,16 @@ function injectChatIframeThemeOverride(iframe) {
     const root = doc.head || doc.documentElement;
     if (!root) return false;
 
-    const hideTicker = localStorage.getItem("chatOverlayHideTicker") === "true";
-    const hideHeader = localStorage.getItem("chatOverlayHideHeader") === "true";
-    const autoHideHeader = localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
-    const hideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
+    let hideTicker = false;
+    let hideHeader = false;
+    let autoHideHeader = true;
+    let hideInput = true;
+    try {
+      hideTicker = localStorage.getItem("chatOverlayHideTicker") === "true";
+      hideHeader = localStorage.getItem("chatOverlayHideHeader") === "true";
+      autoHideHeader = localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
+      hideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
+    } catch {}
     const css = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
 
     let style = doc.getElementById("yt-overlay-theme-override");
@@ -543,12 +878,15 @@ function injectChatIframeThemeOverride(iframe) {
       style.id = "yt-overlay-theme-override";
       style.textContent = css;
       root.appendChild(style);
+      setupChatIframeBannerInteractions(doc);
       return true;
     }
     if (style.textContent !== css) {
       style.textContent = css;
+      setupChatIframeBannerInteractions(doc);
       return true;
     }
+    setupChatIframeBannerInteractions(doc);
     return true;
   } catch {
     return false;
@@ -601,6 +939,7 @@ function applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader = true, hid
         root.appendChild(style);
       }
       style.textContent = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
+      setupChatIframeBannerInteractions(doc);
     } catch {}
   });
 }
