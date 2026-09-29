@@ -44,7 +44,7 @@ function createToggleButton(videoPlayer, toggleCallback) {
   const toggleButton = document.createElement("button");
   toggleButton.id = "toggle-chat-overlay";
   updateToggleButtonIcon(toggleButton, false);
-  toggleButton.title = "Show Chat";
+  toggleButton.title = "Show chat overlay";
   toggleButton.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleCallback();
@@ -196,7 +196,7 @@ function createSettingsPanelElement() {
   const opacityRow = document.createElement("div");
   opacityRow.className = "opacity-control";
   const opacityLabel = document.createElement("label");
-  opacityLabel.textContent = "Opacity:";
+  opacityLabel.textContent = "Chat opacity";
   opacityLabel.htmlFor = "opacity-slider";
   const opacityInput = document.createElement("input");
   opacityInput.type = "range";
@@ -212,7 +212,7 @@ function createSettingsPanelElement() {
   const blurRow = document.createElement("div");
   blurRow.className = "opacity-control";
   const blurLabel = document.createElement("label");
-  blurLabel.textContent = "Blur:";
+  blurLabel.textContent = "Background blur";
   blurLabel.htmlFor = "blur-slider";
   const blurInput = document.createElement("input");
   blurInput.type = "range";
@@ -228,7 +228,7 @@ function createSettingsPanelElement() {
   const autoHideRow = document.createElement("div");
   autoHideRow.className = "toggle-control";
   const autoHideLabel = document.createElement("label");
-  autoHideLabel.textContent = "Auto-hide header on hover";
+  autoHideLabel.textContent = "Show header on hover";
   autoHideLabel.htmlFor = "auto-hide-header-toggle";
   const autoHideInput = document.createElement("input");
   autoHideInput.type = "checkbox";
@@ -255,7 +255,7 @@ function createSettingsPanelElement() {
   const headerRow = document.createElement("div");
   headerRow.className = "toggle-control";
   const headerLabel = document.createElement("label");
-  headerLabel.textContent = "Always hide chat header";
+  headerLabel.textContent = "Hide chat header";
   headerLabel.htmlFor = "hide-header-toggle";
   const headerInput = document.createElement("input");
   headerInput.type = "checkbox";
@@ -264,12 +264,19 @@ function createSettingsPanelElement() {
   headerRow.appendChild(headerInput);
   panel.appendChild(headerRow);
 
-  // Hide chat input (comment, love, money) toggle
+  // Hide chat controls toggle
   const inputRow = document.createElement("div");
   inputRow.className = "toggle-control";
   const inputLabel = document.createElement("label");
-  inputLabel.textContent = "Hide chat input (comment, love, money)";
+  inputLabel.className = "toggle-control-label";
   inputLabel.htmlFor = "hide-input-toggle";
+  const inputLabelText = document.createElement("span");
+  inputLabelText.textContent = "Hide chat controls";
+  const inputDescription = document.createElement("span");
+  inputDescription.className = "toggle-control-description";
+  inputDescription.textContent = "Message box, reactions, and Super Chat buttons.";
+  inputLabel.appendChild(inputLabelText);
+  inputLabel.appendChild(inputDescription);
   const inputInput = document.createElement("input");
   inputInput.type = "checkbox";
   inputInput.id = "hide-input-toggle";
@@ -1219,7 +1226,7 @@ function toggleOverlayChat(overlayChatContainer, iframeContainer, toggleButton) 
   debugState("toggleOverlayChat", () => ({ visible: isOverlayVisible, videoId: getVideoId(), mode: detectChatMode(activeChatIframe) }));
   overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
   overlayChatContainer.classList.toggle("show", isOverlayVisible);
-  toggleButton.title = isOverlayVisible ? "Hide Chat" : "Show Chat";
+  toggleButton.title = isOverlayVisible ? "Hide chat overlay" : "Show chat overlay";
   updateToggleButtonIcon(toggleButton, isOverlayVisible);
 
   if (isOverlayVisible) {

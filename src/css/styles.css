@@ -519,3 +519,14 @@ ytd-watch-grid[fullscreen] #panels-full-bleed-container {
   display: none !important;
 }
 
+.toggle-control label.toggle-control-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-control-description {
+  font-size: 11px;
+  line-height: 1.3;
+  opacity: 0.75;
+}

@@ -1,6 +1,6 @@
 # YouTube Live Chat Overlay
 
-The YouTube Live Chat Overlay is a browser extension that adds a customizable live chat overlay to YouTube videos in fullscreen mode. This allows you to view and interact with the live chat while watching the video in full-screen.
+YouTube Live Chat Overlay shows chat over fullscreen YouTube videos. Move, resize, and adjust the overlay to fit your screen.
 
 
 
@@ -20,9 +20,9 @@ The YouTube Live Chat Overlay is a browser extension that adds a customizable li
 
 ## Features
 
-- Displays live chat messages in a floating overlay on top of the YouTube video
-- Allows you to drag and resize the overlay to your preferred position and size
-- Automatically shows the overlay when entering fullscreen mode on a YouTube video
+- Shows YouTube live chat in a floating overlay during fullscreen playback
+- Lets you move, resize, and adjust the overlay
+- Shows the overlay automatically when a YouTube video enters fullscreen
 
 ## Installation
 
@@ -37,13 +37,14 @@ Download the latest release of the extension from the [Firefox Add-ons website](
 2. Enter fullscreen mode by clicking the fullscreen button or pressing the F11 key.
 3. The live chat overlay will automatically appear on the right side of the video.
 4. Drag and resize the overlay to your preferred position and size using the provided handles.
-5. To toggle the overlay, click the "Toggle Chat Overlay" button in the top-right corner of the video.
+5. Use the chat button on the video player to show or hide the overlay.
 
 ## Configuration
 
-The extension's settings can be accessed by clicking the extension icon in your browser's toolbar and opening the popup window.
+Click the gear icon on the overlay to adjust its appearance and choose which chat controls to show.
 
-- **Enable Chat Overlay**: Toggle the live chat overlay on or off. When enabled, the overlay will appear in fullscreen mode.
+- **Chat opacity** and **Background blur**: Adjust the overlay's appearance.
+- **Chat display**: Show the header on hover, hide the Super Chat ticker, or hide chat controls.
 
 ## Limitations
 
