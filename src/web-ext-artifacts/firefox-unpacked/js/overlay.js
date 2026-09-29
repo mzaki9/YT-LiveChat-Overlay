@@ -95,6 +95,17 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
     localStorage.setItem("chatOverlayBlur", value);
   });
 
+  const seamlessToggle = settingsPanel.querySelector("#seamless-mode-toggle");
+  const savedSeamlessMode = localStorage.getItem("chatOverlaySeamlessMode") === "true";
+  seamlessToggle.checked = savedSeamlessMode;
+  container.classList.toggle("seamless", savedSeamlessMode);
+  seamlessToggle.addEventListener("change", (event) => {
+    event.stopPropagation();
+    const isEnabled = event.target.checked;
+    localStorage.setItem("chatOverlaySeamlessMode", isEnabled);
+    container.classList.toggle("seamless", isEnabled);
+  });
+
   const tickerToggle = settingsPanel.querySelector("#hide-ticker-toggle");
   const savedHideTicker = localStorage.getItem("chatOverlayHideTicker") === "true";
   tickerToggle.checked = savedHideTicker;
@@ -223,6 +234,19 @@ function createSettingsPanelElement() {
   blurRow.appendChild(blurLabel);
   blurRow.appendChild(blurInput);
   panel.appendChild(blurRow);
+
+  // Seamless overlay toggle
+  const seamlessRow = document.createElement("div");
+  seamlessRow.className = "toggle-control";
+  const seamlessLabel = document.createElement("label");
+  seamlessLabel.textContent = "Seamless mode";
+  seamlessLabel.htmlFor = "seamless-mode-toggle";
+  const seamlessInput = document.createElement("input");
+  seamlessInput.type = "checkbox";
+  seamlessInput.id = "seamless-mode-toggle";
+  seamlessRow.appendChild(seamlessLabel);
+  seamlessRow.appendChild(seamlessInput);
+  panel.appendChild(seamlessRow);
 
   // Auto-hide header toggle
   const autoHideRow = document.createElement("div");
@@ -451,7 +475,106 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
       margin-bottom: 0 !important;
       padding-bottom: 8px !important;
     }
-  ` : "";
+  ` : `
+    #input-panel,
+    #input-panel.yt-live-chat-renderer,
+    yt-live-chat-message-input-renderer,
+    #container.yt-live-chat-message-input-renderer,
+    #input-panel #container,
+    yt-reaction-control-panel-overlay-renderer,
+    #reaction-control-panel-overlay,
+    yt-live-chat-reaction-control-panel-renderer,
+    #reaction-control-panel,
+    #reactions,
+    yt-live-chat-restricted-participation-renderer,
+    #container.yt-live-chat-restricted-participation-renderer,
+    #interaction-message,
+    #action-panel,
+    yt-live-chat-action-panel-renderer,
+    yt-live-chat-author-chip.yt-live-chat-message-input-renderer,
+    #buttons.yt-live-chat-message-input-renderer,
+    #picker-buttons.yt-live-chat-message-input-renderer,
+    #send-button.yt-live-chat-message-input-renderer {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+
+    #container.yt-live-chat-message-input-renderer,
+    #input-panel.yt-live-chat-renderer,
+    yt-live-chat-message-input-renderer {
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    yt-live-chat-renderer > #separator,
+    #separator.yt-live-chat-renderer {
+      border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-bottom: none !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      margin: 0 !important;
+      height: 0 !important;
+    }
+
+    #input-container.yt-live-chat-message-input-renderer {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border-radius: 20px !important;
+      backdrop-filter: blur(4px) !important;
+      -webkit-backdrop-filter: blur(4px) !important;
+      transition: background-color 0.2s ease, border-color 0.2s ease !important;
+    }
+
+    #input-container.yt-live-chat-message-input-renderer:focus-within {
+      background-color: rgba(255, 255, 255, 0.14) !important;
+      border-color: rgba(255, 255, 255, 0.35) !important;
+    }
+
+    #input.yt-live-chat-message-input-renderer {
+      color: #f1f1f1 !important;
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+
+    #input.yt-live-chat-message-input-renderer:empty::before,
+    #input.yt-live-chat-message-input-renderer[data-placeholder]:empty::before {
+      color: rgba(255, 255, 255, 0.5) !important;
+    }
+
+    yt-live-chat-author-chip.yt-live-chat-message-input-renderer,
+    #author-name.yt-live-chat-message-input-renderer {
+      color: #f1f1f1 !important;
+    }
+
+    #count.yt-live-chat-message-input-renderer {
+      color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    yt-live-chat-message-input-renderer yt-icon-button,
+    yt-live-chat-message-input-renderer yt-icon,
+    yt-live-chat-message-input-renderer button,
+    yt-live-chat-message-input-renderer #send-button yt-button-renderer,
+    yt-reaction-control-panel-overlay-renderer yt-icon,
+    yt-reaction-control-panel-overlay-renderer yt-icon-button,
+    yt-live-chat-reaction-control-panel-renderer yt-icon,
+    yt-live-chat-reaction-control-panel-renderer yt-icon-button {
+      color: #f1f1f1 !important;
+      fill: #f1f1f1 !important;
+    }
+
+    yt-live-chat-reaction-control-panel-renderer yt-formatted-string {
+      color: #f1f1f1 !important;
+    }
+
+    #container.yt-live-chat-restricted-participation-renderer {
+      border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    yt-live-chat-restricted-participation-renderer yt-formatted-string,
+    yt-live-chat-restricted-participation-renderer yt-button-renderer {
+      color: #f1f1f1 !important;
+    }
+  `;
 
   return `
     html,
@@ -462,15 +585,31 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
     yt-live-chat-app {
       --yt-live-chat-background-color: transparent !important;
       --yt-live-chat-action-panel-background-color: transparent !important;
+      --yt-live-chat-action-panel-background-color-transparent: transparent !important;
       --yt-live-chat-secondary-background-color: transparent !important;
       --yt-live-chat-toast-background-color: rgba(33, 33, 33, 0.9) !important;
       --yt-live-chat-mode-change-background-color: transparent !important;
+      --yt-live-chat-action-panel-border-color: rgba(255, 255, 255, 0.12) !important;
+      --yt-live-chat-input-background-color: rgba(255, 255, 255, 0.08) !important;
+      --yt-live-chat-input-background-color-active: rgba(255, 255, 255, 0.14) !important;
+      --yt-live-chat-input-border-color: rgba(255, 255, 255, 0.15) !important;
       --yt-spec-base-background: transparent !important;
+      --yt-spec-brand-background-primary: transparent !important;
       --yt-spec-general-background-a: transparent !important;
       --yt-spec-general-background-b: transparent !important;
+      --yt-spec-additive-background: transparent !important;
       --yt-sys-color-baseline--base-background: transparent !important;
       --yt-sys-color-baseline--surface: transparent !important;
       --yt-sys-color-baseline--surface-variant: transparent !important;
+      --yt-sys-color-surface: transparent !important;
+      --yt-sys-color-surface-container: transparent !important;
+      --yt-sys-color-surface-container-low: transparent !important;
+      --yt-sys-color-surface-container-high: transparent !important;
+      --yt-sys-color-surface-container-highest: transparent !important;
+      --yt-sys-color-baseline--surface-container: transparent !important;
+      --yt-sys-color-baseline--surface-container-low: transparent !important;
+      --yt-sys-color-baseline--surface-container-high: transparent !important;
+      --yt-sys-color-baseline--surface-container-highest: transparent !important;
       --yt-sys-color-baseline--text-primary: #f1f1f1 !important;
       --yt-sys-color-baseline--text-secondary: #aaa !important;
       --yt-live-chat-primary-text-color: #f1f1f1 !important;
@@ -586,7 +725,10 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
     ytd-menu-popup-renderer,
     tp-yt-paper-dialog,
     yt-sheet-view-model,
-    .yt-overlay-banner-menu {
+    .yt-overlay-banner-menu,
+    yt-emoji-picker-renderer,
+    yt-live-chat-product-picker-renderer,
+    #picker.yt-live-chat-message-input-renderer {
       background-color: rgba(28, 28, 28, 0.96) !important;
       background: rgba(28, 28, 28, 0.96) !important;
       color: #f1f1f1 !important;

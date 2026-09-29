@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Live Chat Overlay",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Display YouTube live chat as an overlay in fullscreen mode",
   "icons": {
     "48": "icon.png"
@@ -14,7 +14,9 @@
   ],
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/*"],
+      "matches": [
+        "*://*.youtube.com/*"
+      ],
       "js": [
         "js/utils.js",
         "js/performance.js",
@@ -22,7 +24,9 @@
         "js/overlay.js",
         "js/content.js"
       ],
-      "css": ["css/styles.css"],
+      "css": [
+        "css/styles.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -31,11 +35,13 @@
     "default_title": "YouTube Live Chat Overlay"
   },
   "background": {
-    "scripts": ["js/background.js"]
+    "scripts": [
+      "js/background.js"
+    ]
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "yt-livechat-overlay@zaki",
+      "id": "{c67d2cdf-97be-48a5-b6d1-3f26a7c94294}",
       "strict_min_version": "113.0"
     }
   }

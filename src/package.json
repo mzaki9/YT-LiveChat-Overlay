@@ -1,6 +1,6 @@
 {
   "name": "youtube-live-chat-overlay",
-  "version": "1.4.0",
+  "version": "1.5.2",
   "description": "Adds a live chat overlay to YouTube videos in fullscreen mode",
   "engines": {
     "node": ">=24"
