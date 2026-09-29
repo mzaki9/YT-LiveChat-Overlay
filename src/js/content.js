@@ -445,13 +445,18 @@ function initializeLifecycle() {
     }
     setupPlayerFullscreenObserver();
     if (!playerFullscreenObserver || !isYouTubeFullscreen()) return;
-    startInjection();
+
+    // Only inject if overlay DOM is missing or detached
+    if (!overlayChatContainer || !overlayChatContainer.isConnected || !toggleButton || !toggleButton.isConnected) {
+      startInjection();
+      return;
+    }
+
     // YouTube starts its native chat a moment after the fullscreen swap. Once it
     // is running, adopt it so only one live chat document stays alive instead of
     // ours plus the hidden native one (docs/perf-findings.md, finding #1).
-    if (chatIframeContainer && shouldUpgradeToNativeChat()) attachChatSource(chatIframeContainer);
-    if (isOverlayVisible && typeof ensureActiveChatThemeOverride === 'function') {
-      ensureActiveChatThemeOverride();
+    if (chatIframeContainer && typeof shouldUpgradeToNativeChat === 'function' && shouldUpgradeToNativeChat()) {
+      attachChatSource(chatIframeContainer);
     }
   }, 1000);
 }

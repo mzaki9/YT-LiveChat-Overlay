@@ -1,6 +1,6 @@
 {
   "name": "youtube-live-chat-overlay",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "private": true,
   "scripts": {
     "lint": "npx web-ext lint --source-dir src",

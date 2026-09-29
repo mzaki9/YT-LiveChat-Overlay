@@ -1032,11 +1032,60 @@ function setupChatIframeBannerInteractions(doc) {
 
   ensureBannerControls();
 
-  const observer = new MutationObserver(() => {
-    ensureBannerControls();
+  let bannerControlsRaf = 0;
+  function scheduleEnsureBannerControls() {
+    if (bannerControlsRaf) return;
+    bannerControlsRaf = requestAnimationFrame(() => {
+      bannerControlsRaf = 0;
+      ensureBannerControls();
+    });
+  }
+
+  const observer = new MutationObserver((mutations) => {
+    let hasRelevantMutation = false;
+    for (let i = 0; i < mutations.length; i++) {
+      const m = mutations[i];
+      const target = m.target;
+      if (target && target.nodeType === 1) {
+        const tname = target.tagName.toLowerCase();
+        if (
+          tname.includes("banner") ||
+          (target.id && target.id.includes("banner")) ||
+          target.closest?.("yt-live-chat-banner-manager-renderer, yt-live-chat-banner-header-renderer")
+        ) {
+          hasRelevantMutation = true;
+          break;
+        }
+      }
+      for (let j = 0; j < m.addedNodes.length; j++) {
+        const node = m.addedNodes[j];
+        if (node.nodeType === 1) {
+          if (node.classList?.contains("yt-overlay-banner-close-btn")) continue;
+          const nname = node.tagName.toLowerCase();
+          // Fast skip for high-frequency chat message rows and tickers
+          if (nname.includes("message") || nname.includes("item") || nname.includes("ticker")) {
+            continue;
+          }
+          if (
+            nname.includes("banner") ||
+            (node.id && node.id.includes("banner")) ||
+            (node.querySelector && node.querySelector("yt-live-chat-banner-header-renderer"))
+          ) {
+            hasRelevantMutation = true;
+            break;
+          }
+        }
+      }
+      if (hasRelevantMutation) break;
+    }
+    if (hasRelevantMutation) {
+      scheduleEnsureBannerControls();
+    }
   });
-  if (doc.body || doc.documentElement) {
-    observer.observe(doc.body || doc.documentElement, {
+
+  const observeTarget = doc.querySelector("yt-live-chat-banner-manager-renderer, #banner-container") || doc.body || doc.documentElement;
+  if (observeTarget) {
+    observer.observe(observeTarget, {
       childList: true,
       subtree: true,
     });
@@ -1048,7 +1097,6 @@ function injectChatIframeThemeOverride(iframe) {
   try {
     const doc = iframe.contentDocument;
     if (!doc) return false;
-
     const root = doc.head || doc.documentElement;
     if (!root) return false;
 
@@ -1078,7 +1126,6 @@ function injectChatIframeThemeOverride(iframe) {
       setupChatIframeBannerInteractions(doc);
       return true;
     }
-    setupChatIframeBannerInteractions(doc);
     return true;
   } catch {
     return false;
