@@ -433,6 +433,43 @@ function createManagedLiveIframe(source) {
 }
 
 function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hideInput = true) {
+  const tickerRules = hideTicker ? `
+    yt-live-chat-ticker-renderer {
+      display: none !important;
+    }
+  ` : `
+    yt-live-chat-ticker-renderer,
+    yt-live-chat-ticker-renderer #container,
+    yt-live-chat-ticker-renderer #items,
+    #ticker.yt-live-chat-renderer,
+    #ticker {
+      background: transparent !important;
+      background-color: transparent !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+      box-shadow: none !important;
+    }
+
+    yt-live-chat-ticker-renderer #left-arrow,
+    yt-live-chat-ticker-renderer #right-arrow,
+    yt-live-chat-ticker-renderer #arrow-container {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+
+    yt-live-chat-ticker-renderer yt-icon,
+    yt-live-chat-ticker-renderer yt-icon-button {
+      color: #f1f1f1 !important;
+      fill: #f1f1f1 !important;
+    }
+
+    yt-live-chat-ticker-paid-message-item-renderer,
+    yt-live-chat-ticker-sponsor-item-renderer,
+    yt-live-chat-ticker-paid-sticker-item-renderer {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+  `;
+
   let headerRules = "";
   if (hideHeader) {
     headerRules = "yt-live-chat-header-renderer { display: none !important; }";
@@ -587,6 +624,7 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
       --yt-live-chat-action-panel-background-color: transparent !important;
       --yt-live-chat-action-panel-background-color-transparent: transparent !important;
       --yt-live-chat-secondary-background-color: transparent !important;
+      --yt-live-chat-ticker-background-color: transparent !important;
       --yt-live-chat-toast-background-color: rgba(33, 33, 33, 0.9) !important;
       --yt-live-chat-mode-change-background-color: transparent !important;
       --yt-live-chat-action-panel-border-color: rgba(255, 255, 255, 0.12) !important;
@@ -621,6 +659,11 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
     yt-live-chat-renderer[is-replay],
     yt-live-chat-item-list-renderer,
     yt-live-chat-header-renderer,
+    yt-live-chat-ticker-renderer,
+    #container.yt-live-chat-ticker-renderer,
+    #items.yt-live-chat-ticker-renderer,
+    #ticker,
+    #ticker.yt-live-chat-renderer,
     #item-scroller,
     #item-list,
     #item-list #items,
@@ -814,7 +857,7 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
     .yt-overlay-dismissed {
       display: none !important;
     }
-    ${hideTicker ? "yt-live-chat-ticker-renderer { display: none !important; }" : ""}
+    ${tickerRules}
     ${headerRules}
     ${inputRules}
   `;
