@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "YouTube Live Chat Overlay",
-  "version": "1.5.3",
-  "description": "Display YouTube live chat as an overlay in fullscreen mode",
+  "version": "1.5.4",
+  "description": "Display YouTube live chat as an overlay in fullscreen and theater mode",
   "icons": {
     "48": "icon.png"
   },

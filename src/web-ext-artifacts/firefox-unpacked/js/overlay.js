@@ -173,6 +173,20 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
     });
   }
 
+  const theaterToggle = settingsPanel.querySelector("#theater-mode-toggle");
+  const savedTheaterMode = typeof isTheaterModeEnabled === "function" ? isTheaterModeEnabled() : true;
+  if (theaterToggle) {
+    theaterToggle.checked = savedTheaterMode;
+    theaterToggle.addEventListener("change", (event) => {
+      event.stopPropagation();
+      const isEnabled = event.target.checked;
+      localStorage.setItem("chatOverlayTheaterMode", isEnabled);
+      if (typeof handleFullscreenChange === "function") {
+        handleFullscreenChange();
+      }
+    });
+  }
+
   settingsPanel.addEventListener("mousedown", (event) => event.stopPropagation());
   settingsPanel.addEventListener("click", (event) => event.stopPropagation());
   settingsPanel.addEventListener("keydown", (event) => event.stopPropagation());
@@ -321,7 +335,26 @@ function createSettingsPanelElement() {
   stealthReplayInput.checked = true;
   stealthReplayRow.appendChild(stealthReplayLabel);
   stealthReplayRow.appendChild(stealthReplayInput);
-  panel.appendChild(stealthReplayRow);
+  // Theater mode toggle
+  const theaterRow = document.createElement("div");
+  theaterRow.className = "toggle-control";
+  const theaterLabel = document.createElement("label");
+  theaterLabel.className = "toggle-control-label";
+  theaterLabel.htmlFor = "theater-mode-toggle";
+  const theaterLabelText = document.createElement("span");
+  theaterLabelText.textContent = "Enable in theater mode";
+  const theaterDescription = document.createElement("span");
+  theaterDescription.className = "toggle-control-description";
+  theaterDescription.textContent = "Replace native chat panel with overlay in theater mode.";
+  theaterLabel.appendChild(theaterLabelText);
+  theaterLabel.appendChild(theaterDescription);
+  const theaterInput = document.createElement("input");
+  theaterInput.type = "checkbox";
+  theaterInput.id = "theater-mode-toggle";
+  theaterInput.checked = typeof isTheaterModeEnabled === "function" ? isTheaterModeEnabled() : true;
+  theaterRow.appendChild(theaterLabel);
+  theaterRow.appendChild(theaterInput);
+  panel.appendChild(theaterRow);
 
   return panel;
 }
@@ -370,24 +403,24 @@ function createChatOverlay(videoPlayer) {
 }
 
 function restoreContainerPosition(container) {
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  const parentWidth = container.offsetParent?.clientWidth || window.innerWidth;
+  const parentHeight = container.offsetParent?.clientHeight || window.innerHeight;
   const savedLeft = localStorage.getItem("chatOverlayLeft");
   const savedTop = localStorage.getItem("chatOverlayTop");
   const savedWidth = localStorage.getItem("chatOverlayWidth");
   const savedHeight = localStorage.getItem("chatOverlayHeight");
 
   if (savedLeft && savedTop && savedWidth && savedHeight) {
-    const left = (parseFloat(savedLeft) / 100) * viewportWidth;
-    const top = (parseFloat(savedTop) / 100) * viewportHeight;
-    const width = (parseFloat(savedWidth) / 100) * viewportWidth;
-    const height = (parseFloat(savedHeight) / 100) * viewportHeight;
-    container.style.left = `${Math.max(0, Math.min(left, viewportWidth - 200))}px`;
-    container.style.top = `${Math.max(0, Math.min(top, viewportHeight - 150))}px`;
+    const left = (parseFloat(savedLeft) / 100) * parentWidth;
+    const top = (parseFloat(savedTop) / 100) * parentHeight;
+    const width = (parseFloat(savedWidth) / 100) * parentWidth;
+    const height = (parseFloat(savedHeight) / 100) * parentHeight;
+    container.style.left = `${Math.max(0, Math.min(left, parentWidth - 200))}px`;
+    container.style.top = `${Math.max(0, Math.min(top, parentHeight - 150))}px`;
     container.style.right = "auto";
     container.style.bottom = "auto";
-    container.style.width = `${Math.max(200, Math.min(width, viewportWidth * 0.9))}px`;
-    container.style.height = `${Math.max(150, Math.min(height, viewportHeight * 0.9))}px`;
+    container.style.width = `${Math.max(200, Math.min(width, parentWidth * 0.9))}px`;
+    container.style.height = `${Math.max(150, Math.min(height, parentHeight * 0.9))}px`;
     return;
   }
 

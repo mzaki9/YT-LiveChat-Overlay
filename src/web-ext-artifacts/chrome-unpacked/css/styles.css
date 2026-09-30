@@ -180,6 +180,13 @@
   right: 18px;
 }
 
+/* Position for theater mode */
+ytd-watch-flexy[theater]:not([fullscreen]) #toggle-chat-overlay,
+ytd-watch-grid[theater]:not([fullscreen]) #toggle-chat-overlay {
+  top: 60px;
+  right: 18px;
+}
+
 /* For modern YouTube layout with side panel */
 
 
@@ -543,6 +550,23 @@ html[data-avatars-enabled="false"] .chat-message:not(:first-child) {
 ytd-watch-flexy[fullscreen] #panels-full-bleed-container,
 ytd-watch-grid[fullscreen] #panels-full-bleed-container {
   display: none !important;
+}
+
+/* Normal 1:1 theater mode layout when theater overlay is active */
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #panels-full-bleed-container,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #panels-full-bleed-container,
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #chat,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #chat {
+  display: none !important;
+}
+
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #player-full-bleed-container,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #player-full-bleed-container,
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #player-theater-container,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #player-theater-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
 }
 
 .toggle-control label.toggle-control-label {

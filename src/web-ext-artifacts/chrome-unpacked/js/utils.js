@@ -97,6 +97,21 @@ function debounce(func, wait) {
     return isPlayerFs || isDocFs;
   }
 
+  function isYouTubeTheater() {
+    const watch = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+    return Boolean(watch && watch.hasAttribute('theater'));
+  }
+
+  function isTheaterModeEnabled() {
+    return localStorage.getItem('chatOverlayTheaterMode') !== 'false';
+  }
+
+  function isOverlayActiveView() {
+    if (isYouTubeFullscreen()) return true;
+    if (isTheaterModeEnabled() && isYouTubeTheater()) return true;
+    return false;
+  }
+
   function isYouTubeDarkMode() {
     try {
       return document.documentElement.hasAttribute('dark') ||

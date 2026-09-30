@@ -14,6 +14,7 @@ let injectionInterval;
 let lifecycleInterval;
 let attachRetryInterval;
 let playerFullscreenObserver;
+let watchModeObserver;
 let lastUrl = location.href;
 let currentVideoId = typeof getVideoId === 'function' ? getVideoId() : null;
 
@@ -43,6 +44,21 @@ function isYouTubeFullscreen() {
   return isPlayerFs || isDocFs;
 }
 
+function isYouTubeTheater() {
+  const watch = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+  return Boolean(watch && watch.hasAttribute('theater'));
+}
+
+function isTheaterModeEnabled() {
+  return localStorage.getItem('chatOverlayTheaterMode') !== 'false';
+}
+
+function isOverlayActiveView() {
+  if (isYouTubeFullscreen()) return true;
+  if (isTheaterModeEnabled() && isYouTubeTheater()) return true;
+  return false;
+}
+
 function removeDuplicateOverlays() {
   const overlays = Array.from(document.querySelectorAll('#overlay-chat-container'));
   const toggles = Array.from(document.querySelectorAll('#toggle-chat-overlay'));
@@ -70,6 +86,7 @@ function cleanupOverlayEventListeners() {
 }
 
 function removeOverlayDom() {
+  document.documentElement.removeAttribute('data-yt-overlay-theater-active');
   cleanupOverlayEventListeners();
   cleanupOverlay();
   overlayChatContainer = null;
@@ -131,7 +148,16 @@ function hasChatSource() {
 function handleFullscreenChange() {
   removeDuplicateOverlays();
 
-  if (!isYouTubeFullscreen()) {
+  const isTheaterActive = Boolean(isYouTubeTheater() && !isYouTubeFullscreen() && isTheaterModeEnabled() && hasChatSource());
+  const prevTheaterActive = document.documentElement.hasAttribute('data-yt-overlay-theater-active');
+  document.documentElement.toggleAttribute('data-yt-overlay-theater-active', isTheaterActive);
+  if (isTheaterActive !== prevTheaterActive) {
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch {}
+  }
+
+  if (!isOverlayActiveView()) {
     removeOverlayDom();
     return;
   }
@@ -147,6 +173,7 @@ function handleFullscreenChange() {
   const canShowToggle = hasChatSource();
   debugState('handleFullscreenChange', () => ({
     fullscreen: isYouTubeFullscreen(),
+    theater: isYouTubeTheater(),
     canShowToggle,
     mode: detectChatMode(),
     videoId: getVideoId(),
@@ -224,12 +251,16 @@ function cleanupAllListeners() {
     playerFullscreenObserver.disconnect();
     playerFullscreenObserver = null;
   }
+  if (watchModeObserver) {
+    watchModeObserver.disconnect();
+    watchModeObserver = null;
+  }
 
   removeOverlayDom();
 }
 
 function injectLiveChatOverlay() {
-  if (!isYouTubeFullscreen()) return false;
+  if (!isOverlayActiveView()) return false;
 
   removeDuplicateOverlays();
   const existingOverlay = document.getElementById('overlay-chat-container');
@@ -272,7 +303,7 @@ function injectLiveChatOverlay() {
     });
 
     keyboardShortcutListener = (event) => {
-      if (event.altKey && event.key.toLowerCase() === 'c' && isYouTubeFullscreen() && hasChatSource()) {
+      if (event.altKey && event.key.toLowerCase() === 'c' && isOverlayActiveView() && hasChatSource()) {
         toggleOverlayChat(overlayChatContainer, chatIframeContainer, toggleButton);
       }
     };
@@ -327,7 +358,7 @@ function handleVideoChange(newVid) {
   }
   setupPlayerFullscreenObserver();
 
-  if (isYouTubeFullscreen()) {
+  if (isOverlayActiveView()) {
     startInjection();
   }
   return true;
@@ -392,7 +423,7 @@ function attemptChatDetection() {
 }
 
 function startInjection() {
-  if (!isYouTubeFullscreen()) {
+  if (!isOverlayActiveView()) {
     removeOverlayDom();
     return;
   }
@@ -428,12 +459,21 @@ function setupPlayerFullscreenObserver() {
   handleFullscreenChange();
 }
 
+function setupWatchModeObserver() {
+  const watch = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+  if (!watch || watchModeObserver) return;
+
+  watchModeObserver = new MutationObserver(handleFullscreenChange);
+  watchModeObserver.observe(watch, { attributes: true, attributeFilter: ['theater', 'fullscreen'] });
+}
+
 function initializeLifecycle() {
   if (!fullscreenChangeListener) {
     fullscreenChangeListener = handleFullscreenChange;
     document.addEventListener('fullscreenchange', fullscreenChangeListener, { passive: true });
   }
   setupPlayerFullscreenObserver();
+  setupWatchModeObserver();
   setupUrlObserver();
 
   if (lifecycleInterval) return;
@@ -444,7 +484,13 @@ function initializeLifecycle() {
       return;
     }
     setupPlayerFullscreenObserver();
-    if (!playerFullscreenObserver || !isYouTubeFullscreen()) return;
+    setupWatchModeObserver();
+    if (!isOverlayActiveView()) {
+      if (overlayChatContainer && overlayChatContainer.isConnected) {
+        removeOverlayDom();
+      }
+      return;
+    }
 
     // Only inject if overlay DOM is missing or detached
     if (!overlayChatContainer || !overlayChatContainer.isConnected || !toggleButton || !toggleButton.isConnected) {

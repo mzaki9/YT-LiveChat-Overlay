@@ -4,15 +4,15 @@
 
 // Save container position and size to localStorage
 function saveContainerPosition(element) {
-  const rect = element.getBoundingClientRect();
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  const parent = element.offsetParent;
+  const parentWidth = parent ? parent.clientWidth : window.innerWidth;
+  const parentHeight = parent ? parent.clientHeight : window.innerHeight;
   
   // Save position as percentages for responsive behavior
-  localStorage.setItem("chatOverlayLeft", (rect.left / viewportWidth * 100).toFixed(2));
-  localStorage.setItem("chatOverlayTop", (rect.top / viewportHeight * 100).toFixed(2));
-  localStorage.setItem("chatOverlayWidth", (rect.width / viewportWidth * 100).toFixed(2));
-  localStorage.setItem("chatOverlayHeight", (rect.height / viewportHeight * 100).toFixed(2));
+  localStorage.setItem("chatOverlayLeft", (element.offsetLeft / parentWidth * 100).toFixed(2));
+  localStorage.setItem("chatOverlayTop", (element.offsetTop / parentHeight * 100).toFixed(2));
+  localStorage.setItem("chatOverlayWidth", (element.offsetWidth / parentWidth * 100).toFixed(2));
+  localStorage.setItem("chatOverlayHeight", (element.offsetHeight / parentHeight * 100).toFixed(2));
 }
 
 // Make an element draggable using the provided drag handle
@@ -33,9 +33,8 @@ function makeDraggable(element, dragHandle) {
     isDragging = true;
     startClientX = e.clientX;
     startClientY = e.clientY;
-    const rect = element.getBoundingClientRect();
-    startLeft = rect.left;
-    startTop = rect.top;
+    startLeft = element.offsetLeft;
+    startTop = element.offsetTop;
     targetLeft = startLeft;
     targetTop = startTop;
     element.style.right = "auto";
@@ -75,13 +74,13 @@ function makeDraggable(element, dragHandle) {
     targetLeft = startLeft + (e.clientX - startClientX);
     targetTop = startTop + (e.clientY - startClientY);
 
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const parentWidth = element.offsetParent?.clientWidth || window.innerWidth;
+    const parentHeight = element.offsetParent?.clientHeight || window.innerHeight;
     const elementWidth = element.offsetWidth;
     const elementHeight = element.offsetHeight;
 
-    targetLeft = Math.max(0, Math.min(targetLeft, viewportWidth - elementWidth));
-    targetTop = Math.max(0, Math.min(targetTop, viewportHeight - elementHeight));
+    targetLeft = Math.max(0, Math.min(targetLeft, parentWidth - elementWidth));
+    targetTop = Math.max(0, Math.min(targetTop, parentHeight - elementHeight));
 
     if (pendingFrame) return;
     const frameStart = performance.now();
@@ -164,8 +163,8 @@ function makeResizable(element, resizer) {
     const deltaX = e.clientX - startX;
     const deltaY = e.clientY - startY;
 
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const parentWidth = element.offsetParent?.clientWidth || window.innerWidth;
+    const parentHeight = element.offsetParent?.clientHeight || window.innerHeight;
 
     const elementLeft = element.offsetLeft;
     const elementTop = element.offsetTop;
@@ -176,8 +175,8 @@ function makeResizable(element, resizer) {
     newWidth = Math.max(MIN_WIDTH, newWidth);
     newHeight = Math.max(MIN_HEIGHT, newHeight);
 
-    newWidth = Math.min(newWidth, viewportWidth - elementLeft - PADDING);
-    newHeight = Math.min(newHeight, viewportHeight - elementTop - PADDING);
+    newWidth = Math.min(newWidth, parentWidth - elementLeft - PADDING);
+    newHeight = Math.min(newHeight, parentHeight - elementTop - PADDING);
 
     if (pendingFrame) return;
     const frameStart = performance.now();
