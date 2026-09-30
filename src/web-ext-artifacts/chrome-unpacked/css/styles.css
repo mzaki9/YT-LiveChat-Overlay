@@ -552,22 +552,106 @@ ytd-watch-grid[fullscreen] #panels-full-bleed-container {
   display: none !important;
 }
 
-/* Normal 1:1 theater mode layout when theater overlay is active */
-html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #panels-full-bleed-container,
-html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #panels-full-bleed-container,
-html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #chat,
-html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #chat {
-  display: none !important;
-}
-
+/* Normal 1:1 theater mode layout when native normal theater or theater overlay is active */
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #full-bleed-container,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #full-bleed-container,
 html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #player-full-bleed-container,
 html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #player-full-bleed-container,
 html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #player-theater-container,
-html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #player-theater-container {
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #player-theater-container,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #full-bleed-container,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #full-bleed-container,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #player-full-bleed-container,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #player-full-bleed-container,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #player-theater-container,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #player-theater-container {
   width: 100% !important;
   max-width: 100% !important;
   height: 100% !important;
+  flex: 1 1 100% !important;
 }
+
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #panels-full-bleed-container,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #panels-full-bleed-container,
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #chat,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #chat,
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #chat-container,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #chat-container,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #panels-full-bleed-container,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #panels-full-bleed-container,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #chat,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #chat,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #chat-container,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #chat-container,
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] ytd-live-chat-frame,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] ytd-live-chat-frame,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] ytd-live-chat-frame,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] ytd-live-chat-frame {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  flex: 0 0 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater],
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] {
+  --ytd-watch-flexy-chat-width: 0px !important;
+  --ytd-watch-flexy-chat-max-height: 0px !important;
+}
+
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #columns,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #columns,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #columns,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #columns {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+  width: 100% !important;
+  max-width: var(--ytd-watch-flexy-max-horizontal-width, 1754px) !important;
+  margin: 0 auto !important;
+  padding-left: var(--ytd-margin-6x, 24px) !important;
+  padding-right: var(--ytd-margin-6x, 24px) !important;
+  box-sizing: border-box !important;
+}
+
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #primary,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #primary,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #primary,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #primary {
+  flex: 1 1 auto !important;
+  min-width: var(--ytd-watch-flexy-min-player-width, 360px) !important;
+  max-width: var(--ytd-watch-flexy-max-player-width, 1280px) !important;
+}
+
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #secondary,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #secondary,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #secondary,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #secondary {
+  flex: 0 0 var(--ytd-watch-flexy-sidebar-width, 400px) !important;
+  width: var(--ytd-watch-flexy-sidebar-width, 400px) !important;
+  min-width: var(--ytd-watch-flexy-sidebar-min-width, 300px) !important;
+  padding-left: var(--ytd-margin-6x, 24px) !important;
+  box-sizing: border-box !important;
+}
+
+html[data-yt-overlay-theater-active] ytd-watch-flexy[theater] #secondary #related,
+html[data-yt-overlay-theater-active] ytd-watch-grid[theater] #secondary #related,
+html[data-yt-native-theater-normal] ytd-watch-flexy[theater] #secondary #related,
+html[data-yt-native-theater-normal] ytd-watch-grid[theater] #secondary #related {
+  display: block !important;
+  width: 100% !important;
+  margin-top: 0 !important;
+}
+
 
 .toggle-control label.toggle-control-label {
   display: flex;

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Live Chat Overlay",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Display YouTube live chat as an overlay in fullscreen and theater mode",
   "icons": {
     "48": "icon.png"
@@ -19,6 +19,7 @@
       ],
       "js": [
         "js/utils.js",
+        "js/theater-layout.js",
         "js/performance.js",
         "js/ui.js",
         "js/overlay.js",

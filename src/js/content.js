@@ -15,6 +15,7 @@ let lifecycleInterval;
 let attachRetryInterval;
 let playerFullscreenObserver;
 let watchModeObserver;
+let nativeTheaterLayoutController = null;
 let lastUrl = location.href;
 let currentVideoId = typeof getVideoId === 'function' ? getVideoId() : null;
 
@@ -157,6 +158,10 @@ function handleFullscreenChange() {
     } catch {}
   }
 
+  if (nativeTheaterLayoutController) {
+    nativeTheaterLayoutController.scheduleUpdate();
+  }
+
   if (!isOverlayActiveView()) {
     removeOverlayDom();
     return;
@@ -254,6 +259,10 @@ function cleanupAllListeners() {
   if (watchModeObserver) {
     watchModeObserver.disconnect();
     watchModeObserver = null;
+  }
+  if (nativeTheaterLayoutController) {
+    nativeTheaterLayoutController.destroy();
+    nativeTheaterLayoutController = null;
   }
 
   removeOverlayDom();
@@ -360,6 +369,9 @@ function handleVideoChange(newVid) {
 
   if (isOverlayActiveView()) {
     startInjection();
+  }
+  if (nativeTheaterLayoutController) {
+    nativeTheaterLayoutController.scheduleUpdate();
   }
   return true;
 }
@@ -475,6 +487,11 @@ function initializeLifecycle() {
   setupPlayerFullscreenObserver();
   setupWatchModeObserver();
   setupUrlObserver();
+
+  if (!nativeTheaterLayoutController && typeof NativeLayoutNormalModeInTheater === 'function') {
+    nativeTheaterLayoutController = NativeLayoutNormalModeInTheater({ target: 'normal' });
+    nativeTheaterLayoutController.init();
+  }
 
   if (lifecycleInterval) return;
   lifecycleInterval = setInterval(() => {

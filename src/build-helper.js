@@ -8,6 +8,7 @@ function validateFiles(manifestName) {
     manifestName || 'manifest.json',
     'icon.png',
     'js/utils.js',
+    'js/theater-layout.js',
     'js/performance.js',
     'js/ui.js',
     'js/overlay.js',
@@ -32,6 +33,7 @@ function validateFiles(manifestName) {
 function cleanBOMFromFiles() {
   const jsFiles = [
     'js/utils.js',
+    'js/theater-layout.js',
     'js/ui.js',
     'js/overlay.js',
     'js/content.js',
@@ -94,6 +96,7 @@ function buildUnpacked(target) {
     'js/content.js',
     'js/overlay.js',
     'js/performance.js',
+    'js/theater-layout.js',
     'js/ui.js',
     'js/utils.js'
   ];
