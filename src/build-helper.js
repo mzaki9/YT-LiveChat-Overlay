@@ -1,22 +1,22 @@
-const fs = require('fs');
-const path = require('path');
-const webExt = require('web-ext');
+const fs = require("node:fs");
+const path = require("node:path");
+const webExt = require("web-ext");
 
 // Validate the file structure before building
 function validateFiles(manifestName) {
   const requiredFiles = [
-    manifestName || 'manifest.json',
-    'icon.png',
-    'js/utils.js',
-    'js/theater-layout.js',
-    'js/performance.js',
-    'js/ui.js',
-    'js/overlay.js',
-    'js/content.js',
-    'js/background.js',
-    'css/styles.css'
+    manifestName || "manifest.json",
+    "icon.png",
+    "js/utils.js",
+    "js/theater-layout.js",
+    "js/performance.js",
+    "js/ui.js",
+    "js/overlay.js",
+    "js/content.js",
+    "js/background.js",
+    "css/styles.css",
   ];
-  
+
   let allFound = true;
   for (const file of requiredFiles) {
     const filePath = path.join(__dirname, file);
@@ -25,54 +25,49 @@ function validateFiles(manifestName) {
       allFound = false;
     }
   }
-  
+
   return allFound;
 }
 
 // Remove any potential problematic BOM characters from files
 function cleanBOMFromFiles() {
   const jsFiles = [
-    'js/utils.js',
-    'js/theater-layout.js',
-    'js/ui.js',
-    'js/overlay.js',
-    'js/content.js',
+    "js/utils.js",
+    "js/theater-layout.js",
+    "js/ui.js",
+    "js/overlay.js",
+    "js/content.js",
   ];
-  
-  const cssFiles = [
-    'css/styles.css'
-  ];
-  
-  const jsonFiles = [
-    'manifest.json',
-    'manifest-firefox.json'
-  ];
-  
+
+  const cssFiles = ["css/styles.css"];
+
+  const jsonFiles = ["manifest.json", "manifest-firefox.json"];
+
   // Check and clean JavaScript files
   for (const file of [...jsFiles, ...cssFiles, ...jsonFiles]) {
     const filePath = path.join(__dirname, file);
     if (fs.existsSync(filePath)) {
-      let content = fs.readFileSync(filePath, 'utf8');
-      
+      let content = fs.readFileSync(filePath, "utf8");
+
       // Remove "filepath:" comments that might be added by code editors
-      if (file.endsWith('.js') || file.endsWith('.css')) {
-        content = content.replace(/\/\/\s*filepath:.+/g, '');
+      if (file.endsWith(".js") || file.endsWith(".css")) {
+        content = content.replace(/\/\/\s*filepath:.+/g, "");
       }
-      
+
       // Remove Byte Order Marks which can cause issues
-      if (content.charCodeAt(0) === 0xFEFF) {
+      if (content.charCodeAt(0) === 0xfeff) {
         console.log(`Removing BOM from ${file}`);
         content = content.substring(1);
       }
-      
+
       // Check for and fix line endings
-      if (content.includes('\r\n')) {
+      if (content.includes("\r\n")) {
         console.log(`Converting CRLF to LF in ${file}`);
-        content = content.replace(/\r\n/g, '\n');
+        content = content.replace(/\r\n/g, "\n");
       }
-      
+
       // Write clean content back
-      fs.writeFileSync(filePath, content, 'utf8');
+      fs.writeFileSync(filePath, content, "utf8");
     }
   }
 }
@@ -85,39 +80,52 @@ function copyFileToDir(relativePath, outputDir) {
 }
 
 function buildUnpacked(target) {
-  const outputDir = path.join(__dirname, 'web-ext-artifacts', target === 'firefox' ? 'firefox-unpacked' : 'chrome-unpacked');
+  const outputDir = path.join(
+    __dirname,
+    "web-ext-artifacts",
+    target === "firefox" ? "firefox-unpacked" : "chrome-unpacked",
+  );
   fs.rmSync(outputDir, { recursive: true, force: true });
   fs.mkdirSync(outputDir, { recursive: true });
 
   const files = [
-    'icon.png',
-    'css/styles.css',
-    'js/background.js',
-    'js/content.js',
-    'js/overlay.js',
-    'js/performance.js',
-    'js/theater-layout.js',
-    'js/ui.js',
-    'js/utils.js'
+    "icon.png",
+    "css/styles.css",
+    "js/background.js",
+    "js/content.js",
+    "js/overlay.js",
+    "js/performance.js",
+    "js/theater-layout.js",
+    "js/ui.js",
+    "js/utils.js",
   ];
 
-  const manifestSource = target === 'firefox' ? 'manifest-firefox.json' : 'manifest.json';
+  const manifestSource =
+    target === "firefox" ? "manifest-firefox.json" : "manifest.json";
   copyFileToDir(manifestSource, outputDir);
-  if (manifestSource !== 'manifest.json') {
-    fs.renameSync(path.join(outputDir, manifestSource), path.join(outputDir, 'manifest.json'));
+  if (manifestSource !== "manifest.json") {
+    fs.renameSync(
+      path.join(outputDir, manifestSource),
+      path.join(outputDir, "manifest.json"),
+    );
   }
 
   for (const file of files) {
     copyFileToDir(file, outputDir);
   }
 
-  if (target !== 'firefox') {
-    const chromeManifestPath = path.join(outputDir, 'manifest.json');
+  if (target !== "firefox") {
+    const chromeManifestPath = path.join(outputDir, "manifest.json");
     if (fs.existsSync(chromeManifestPath)) {
-      const chromeManifest = JSON.parse(fs.readFileSync(chromeManifestPath, 'utf8'));
-      chromeManifest.background = { service_worker: 'js/background.js' };
+      const chromeManifest = JSON.parse(
+        fs.readFileSync(chromeManifestPath, "utf8"),
+      );
+      chromeManifest.background = { service_worker: "js/background.js" };
       delete chromeManifest.browser_specific_settings;
-      fs.writeFileSync(chromeManifestPath, JSON.stringify(chromeManifest, null, 2));
+      fs.writeFileSync(
+        chromeManifestPath,
+        JSON.stringify(chromeManifest, null, 2),
+      );
     }
   }
 
@@ -126,53 +134,65 @@ function buildUnpacked(target) {
 
 // Build process
 async function build(target) {
-  const targetManifest = target === 'firefox' ? 'manifest-firefox.json' : 'manifest.json';
-  
-  console.log(`Building for ${target || 'default'} (manifest: ${targetManifest})...`);
-  
+  const targetManifest =
+    target === "firefox" ? "manifest-firefox.json" : "manifest.json";
+
+  console.log(
+    `Building for ${target || "default"} (manifest: ${targetManifest})...`,
+  );
+
   // For Firefox, swap manifests
-  if (target === 'firefox') {
-    if (!fs.existsSync(path.join(__dirname, 'manifest-firefox.json'))) {
-      console.error('manifest-firefox.json not found!');
+  if (target === "firefox") {
+    if (!fs.existsSync(path.join(__dirname, "manifest-firefox.json"))) {
+      console.error("manifest-firefox.json not found!");
       process.exit(1);
     }
     // Backup current manifest and swap
-    fs.copyFileSync(path.join(__dirname, 'manifest.json'), path.join(__dirname, 'manifest-chrome.bak'));
-    fs.copyFileSync(path.join(__dirname, 'manifest-firefox.json'), path.join(__dirname, 'manifest.json'));
+    fs.copyFileSync(
+      path.join(__dirname, "manifest.json"),
+      path.join(__dirname, "manifest-chrome.bak"),
+    );
+    fs.copyFileSync(
+      path.join(__dirname, "manifest-firefox.json"),
+      path.join(__dirname, "manifest.json"),
+    );
   }
-  
-  console.log('Validating file structure...');
+
+  console.log("Validating file structure...");
   if (!validateFiles(targetManifest)) {
-    console.error('File validation failed. Please fix the issues above.');
+    console.error("File validation failed. Please fix the issues above.");
     process.exit(1);
   }
-  
-  console.log('Cleaning files...');
+
+  console.log("Cleaning files...");
   cleanBOMFromFiles();
-  
-  const manifestBak = path.join(__dirname, 'manifest-chrome.bak');
-  
-  console.log('Building extension...');
+
+  const manifestBak = path.join(__dirname, "manifest-chrome.bak");
+
+  console.log("Building extension...");
   try {
-    const defaultArtifactsDir = path.join(__dirname, 'web-ext-artifacts');
+    const defaultArtifactsDir = path.join(__dirname, "web-ext-artifacts");
     const buildOpts = {
       sourceDir: __dirname,
       artifactsDir: defaultArtifactsDir,
       overwriteDest: true,
     };
-    
-    if (target === 'chrome') {
-      buildOpts.filename = 'youtube_live_chat_overlay-chrome-{version}.zip';
-    } else if (target === 'firefox') {
-      buildOpts.filename = 'youtube_live_chat_overlay-firefox-{version}.zip';
+
+    if (target === "chrome") {
+      buildOpts.filename = "youtube_live_chat_overlay-chrome-{version}.zip";
+    } else if (target === "firefox") {
+      buildOpts.filename = "youtube_live_chat_overlay-firefox-{version}.zip";
     }
 
     try {
-      const manifestPath = path.join(__dirname, 'manifest.json');
+      const manifestPath = path.join(__dirname, "manifest.json");
       if (fs.existsSync(manifestPath)) {
-        const pkgManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        const pkgManifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
         if (pkgManifest.version && buildOpts.filename) {
-          const expectedFile = path.join(defaultArtifactsDir, buildOpts.filename.replace('{version}', pkgManifest.version));
+          const expectedFile = path.join(
+            defaultArtifactsDir,
+            buildOpts.filename.replace("{version}", pkgManifest.version),
+          );
           if (fs.existsSync(expectedFile)) {
             fs.unlinkSync(expectedFile);
           }
@@ -181,34 +201,42 @@ async function build(target) {
     } catch {}
 
     await webExt.cmd.build(buildOpts, { shouldExitProgram: false });
-    if (target === 'chrome' || target === 'default' || target === 'firefox') {
+    if (target === "chrome" || target === "default" || target === "firefox") {
       const unpackedDir = buildUnpacked(target);
-      console.log(`${target === 'firefox' ? 'Firefox' : 'Chrome'} unpacked extension ready: ${unpackedDir}`);
+      console.log(
+        `${target === "firefox" ? "Firefox" : "Chrome"} unpacked extension ready: ${unpackedDir}`,
+      );
     }
-    
-    console.log(`\n✅ Build successful! Extension file created in web-ext-artifacts folder.`);
-    
+
+    console.log(
+      `\n✅ Build successful! Extension file created in web-ext-artifacts folder.`,
+    );
+
     // Show the file size to verify it's not corrupted
-    const artifactsDir = path.join(__dirname, 'web-ext-artifacts');
+    const artifactsDir = path.join(__dirname, "web-ext-artifacts");
     const files = fs.readdirSync(artifactsDir);
     const latestFile = files
-      .filter(f => f.endsWith('.zip'))
+      .filter((f) => f.endsWith(".zip"))
       .sort((a, b) => {
-        return fs.statSync(path.join(artifactsDir, b)).mtime.getTime() - 
-               fs.statSync(path.join(artifactsDir, a)).mtime.getTime();
+        return (
+          fs.statSync(path.join(artifactsDir, b)).mtime.getTime() -
+          fs.statSync(path.join(artifactsDir, a)).mtime.getTime()
+        );
       })[0];
-    
+
     if (latestFile) {
       const stats = fs.statSync(path.join(artifactsDir, latestFile));
       const fileSizeKB = (stats.size / 1024).toFixed(2);
       console.log(`File: ${latestFile} (${fileSizeKB} KB)`);
-      
+
       if (stats.size < 5000) {
-        console.warn('⚠️ Warning: The build file is very small, which might indicate a problem.');
+        console.warn(
+          "⚠️ Warning: The build file is very small, which might indicate a problem.",
+        );
       }
     }
   } catch (error) {
-    console.error('Build failed:', error.message);
+    console.error("Build failed:", error.message);
     throw error; // Re-throw so cleanup happens in outer try/finally
   } finally {
     // Restore Chrome manifest if we swapped
@@ -217,16 +245,16 @@ async function build(target) {
 }
 
 function restoreManifest(target, manifestBak) {
-  if (target === 'firefox' && fs.existsSync(manifestBak)) {
-    const srcManifest = path.join(__dirname, 'manifest.json');
+  if (target === "firefox" && fs.existsSync(manifestBak)) {
+    const srcManifest = path.join(__dirname, "manifest.json");
     fs.copyFileSync(manifestBak, srcManifest);
     fs.unlinkSync(manifestBak);
-    console.log('Restored Chrome manifest.');
+    console.log("Restored Chrome manifest.");
   }
 }
 
 async function run() {
-  const target = process.argv[2] || 'default';
+  const target = process.argv[2] || "default";
   try {
     await build(target);
   } catch (error) {
@@ -235,4 +263,3 @@ async function run() {
 }
 
 run();
-

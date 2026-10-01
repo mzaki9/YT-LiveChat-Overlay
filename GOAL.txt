@@ -1,0 +1,177 @@
+```text
+refactor(codebase)
+  |> understand()
+  |> identify(responsibilities)
+  |> identify(dependencies)
+  |> identify(side_effects)
+  |> identify(shared_state)
+  |> identify(duplication)
+  |> identify(unnecessary_abstractions)
+
+  |> transform(
+       code =>
+         code
+           |> simplify()
+           |> separate(concerns)
+           |> isolate(side_effects)
+           |> make_dependencies_explicit()
+           |> reduce(coupling)
+           |> reduce(shared_state)
+           |> improve(data_flow)
+           |> improve(composability)
+           |> improve(testability)
+     )
+
+  |> preserve(
+       behavior,
+       public_api,
+       contracts,
+       functionality
+     )
+
+  |> reject(
+       unnecessary_abstractions,
+       unnecessary_rewrites,
+       clever_code,
+       premature_optimization,
+       forced_functional_syntax
+     )
+
+  |> prefer(
+       clarity,
+       simplicity,
+       explicit_dependencies,
+       cohesive_modules,
+       predictable_behavior
+     )
+
+  |> validate(
+       correctness,
+       regressions,
+       maintainability
+     )
+
+  |> output(clean_code)
+```
+
+### Refactoring Rules
+
+```text
+function refactor(module):
+
+    module
+      |> understand_before_modify()
+      |> preserve_existing_behavior()
+
+      |> when(code.is_complex()):
+           simplify()
+
+      |> when(code.has_multiple_responsibilities()):
+           separate_responsibilities()
+
+      |> when(code.has_hidden_dependencies()):
+           make_dependencies_explicit()
+
+      |> when(code.has_shared_state()):
+           reduce_shared_state()
+
+      |> when(code.has_side_effects()):
+           isolate_side_effects()
+
+      |> when(code.has_duplication()):
+           extract_shared_logic()
+
+      |> when(code.has_unnecessary_abstraction()):
+           remove_abstraction()
+
+      |> when(code.is_hard_to_test()):
+           isolate_logic()
+
+      |> when(code.is_hard_to_reason_about()):
+           simplify_data_flow()
+
+      |> when(abstraction.does_not_reduce_complexity()):
+           delete(abstraction)
+
+      |> return()
+```
+
+### Core Principle
+
+```text
+functional_principles
+    |> use_as(design_philosophy)
+    |> not_as(syntax_constraint)
+
+think(functionally)
+write(idiomatically)
+preserve(behavior)
+minimize(complexity)
+maximize(clarity)
+```
+
+### Decision Function
+
+```text
+choose(current, proposed):
+
+    proposed
+      |> if(simpler_than(current))
+      |> and(if(easier_to_reason_about(current)))
+      |> and(if(preserves_behavior(current)))
+      |> and(if(reduces_coupling(current)))
+      |> then(accept)
+      |> else(keep_current)
+```
+
+### Final Constraint
+
+```text
+DO NOT:
+
+    rewrite_everything()
+    force_pure_functions()
+    eliminate_all_mutation()
+    replace_every_loop_with_map()
+    introduce_functional_libraries()
+    introduce_monads()
+    introduce_currying()
+    create_abstractions_without_need()
+    optimize_without_evidence()
+
+DO:
+
+    understand()
+    simplify()
+    compose()
+    isolate()
+    separate()
+    make_explicit()
+    reduce_coupling()
+    preserve_behavior()
+    remove_unnecessary_complexity()
+```
+
+The objective is:
+
+```text
+good_refactor =
+    simpler
+    + clearer
+    + more_composable
+    + more_testable
+    + less_coupled
+    + predictable
+    + behavior_preserved
+```
+
+```text
+refactor(codebase)
+    |> make_simple()
+    |> make_explicit()
+    |> make_composable()
+    |> make_reasonable()
+    |> preserve_behavior()
+```
+```
+

@@ -7,12 +7,32 @@ function saveContainerPosition(element) {
   const parent = element.offsetParent;
   const parentWidth = parent ? parent.clientWidth : window.innerWidth;
   const parentHeight = parent ? parent.clientHeight : window.innerHeight;
-  
+
   // Save position as percentages for responsive behavior
-  localStorage.setItem("chatOverlayLeft", (element.offsetLeft / parentWidth * 100).toFixed(2));
-  localStorage.setItem("chatOverlayTop", (element.offsetTop / parentHeight * 100).toFixed(2));
-  localStorage.setItem("chatOverlayWidth", (element.offsetWidth / parentWidth * 100).toFixed(2));
-  localStorage.setItem("chatOverlayHeight", (element.offsetHeight / parentHeight * 100).toFixed(2));
+  localStorage.setItem(
+    "chatOverlayLeft",
+    ((element.offsetLeft / parentWidth) * 100).toFixed(2),
+  );
+  localStorage.setItem(
+    "chatOverlayTop",
+    ((element.offsetTop / parentHeight) * 100).toFixed(2),
+  );
+  localStorage.setItem(
+    "chatOverlayWidth",
+    ((element.offsetWidth / parentWidth) * 100).toFixed(2),
+  );
+  localStorage.setItem(
+    "chatOverlayHeight",
+    ((element.offsetHeight / parentHeight) * 100).toFixed(2),
+  );
+}
+
+// Enable or disable pointer events on all child iframes during drag/resize
+function disableIframePointerEvents(element, disable) {
+  const iframes = element.querySelectorAll("iframe");
+  for (const iframe of iframes) {
+    iframe.style.pointerEvents = disable ? "none" : "auto";
+  }
 }
 
 // Make an element draggable using the provided drag handle
@@ -41,7 +61,7 @@ function makeDraggable(element, dragHandle) {
     element.style.bottom = "auto";
     element.style.transform = "none";
     element.classList.add("dragging");
-    disableIframePointerEvents(true);
+    disableIframePointerEvents(element, true);
   });
 
   dragHandle.addEventListener("pointermove", (e) => {
@@ -49,24 +69,17 @@ function makeDraggable(element, dragHandle) {
     onDrag(e);
   });
 
-  dragHandle.addEventListener("pointerup", (e) => {
-    stopDrag(e);
+  dragHandle.addEventListener("pointerup", () => {
+    stopDrag();
   });
 
-  dragHandle.addEventListener("pointercancel", (e) => {
-    stopDrag(e);
+  dragHandle.addEventListener("pointercancel", () => {
+    stopDrag();
   });
 
-  dragHandle.addEventListener("lostpointercapture", (e) => {
-    stopDrag(e);
+  dragHandle.addEventListener("lostpointercapture", () => {
+    stopDrag();
   });
-
-  function disableIframePointerEvents(disable) {
-    const iframes = element.querySelectorAll("iframe");
-    iframes.forEach((iframe) => {
-      iframe.style.pointerEvents = disable ? "none" : "auto";
-    });
-  }
 
   function onDrag(e) {
     if (!isDragging) return;
@@ -75,7 +88,8 @@ function makeDraggable(element, dragHandle) {
     targetTop = startTop + (e.clientY - startClientY);
 
     const parentWidth = element.offsetParent?.clientWidth || window.innerWidth;
-    const parentHeight = element.offsetParent?.clientHeight || window.innerHeight;
+    const parentHeight =
+      element.offsetParent?.clientHeight || window.innerHeight;
     const elementWidth = element.offsetWidth;
     const elementHeight = element.offsetHeight;
 
@@ -94,7 +108,7 @@ function makeDraggable(element, dragHandle) {
     });
   }
 
-  function stopDrag(e) {
+  function stopDrag() {
     if (!isDragging) return;
     isDragging = false;
     activePointerId = null;
@@ -103,7 +117,7 @@ function makeDraggable(element, dragHandle) {
       pendingFrame = 0;
     }
     element.classList.remove("dragging");
-    disableIframePointerEvents(false);
+    disableIframePointerEvents(element, false);
     saveContainerPosition(element);
   }
 }
@@ -130,7 +144,7 @@ function makeResizable(element, resizer) {
     startWidth = element.offsetWidth;
     startHeight = element.offsetHeight;
     element.classList.add("resizing");
-    disableIframePointerEvents(true);
+    disableIframePointerEvents(element, true);
   });
 
   resizer.addEventListener("pointermove", (e) => {
@@ -138,24 +152,17 @@ function makeResizable(element, resizer) {
     onResize(e);
   });
 
-  resizer.addEventListener("pointerup", (e) => {
-    stopResize(e);
+  resizer.addEventListener("pointerup", () => {
+    stopResize();
   });
 
-  resizer.addEventListener("pointercancel", (e) => {
-    stopResize(e);
+  resizer.addEventListener("pointercancel", () => {
+    stopResize();
   });
 
-  resizer.addEventListener("lostpointercapture", (e) => {
-    stopResize(e);
+  resizer.addEventListener("lostpointercapture", () => {
+    stopResize();
   });
-
-  function disableIframePointerEvents(disable) {
-    const iframes = element.querySelectorAll("iframe");
-    iframes.forEach((iframe) => {
-      iframe.style.pointerEvents = disable ? "none" : "auto";
-    });
-  }
 
   function onResize(e) {
     if (!isResizing) return;
@@ -164,7 +171,8 @@ function makeResizable(element, resizer) {
     const deltaY = e.clientY - startY;
 
     const parentWidth = element.offsetParent?.clientWidth || window.innerWidth;
-    const parentHeight = element.offsetParent?.clientHeight || window.innerHeight;
+    const parentHeight =
+      element.offsetParent?.clientHeight || window.innerHeight;
 
     const elementLeft = element.offsetLeft;
     const elementTop = element.offsetTop;
@@ -190,7 +198,7 @@ function makeResizable(element, resizer) {
     });
   }
 
-  function stopResize(e) {
+  function stopResize() {
     if (!isResizing) return;
     isResizing = false;
     activePointerId = null;
@@ -199,7 +207,7 @@ function makeResizable(element, resizer) {
       pendingFrame = 0;
     }
     element.classList.remove("resizing");
-    disableIframePointerEvents(false);
+    disableIframePointerEvents(element, false);
     saveContainerPosition(element);
   }
 }

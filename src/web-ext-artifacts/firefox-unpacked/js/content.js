@@ -1,5 +1,5 @@
 if (window.top !== window) {
-  throw new Error('YT Chat Overlay: not running in top frame');
+  throw new Error("YT Chat Overlay: not running in top frame");
 }
 
 let videoPlayer;
@@ -17,59 +17,36 @@ let playerFullscreenObserver;
 let watchModeObserver;
 let nativeTheaterLayoutController = null;
 let lastUrl = location.href;
-let currentVideoId = typeof getVideoId === 'function' ? getVideoId() : null;
+let currentVideoId = typeof getVideoId === "function" ? getVideoId() : null;
 
 const extApi = globalThis.browser || globalThis.chrome || null;
 
 function getSavedOverlayVisible() {
-  const savedState = localStorage.getItem('youtubeOverlayVisible');
-  if (savedState !== null) return savedState === 'true';
-  const legacyState = localStorage.getItem('overlayVisible');
-  if (legacyState !== null) return legacyState === 'true';
-  localStorage.setItem('youtubeOverlayVisible', 'true');
+  const savedState = localStorage.getItem("youtubeOverlayVisible");
+  if (savedState !== null) return savedState === "true";
+  const legacyState = localStorage.getItem("overlayVisible");
+  if (legacyState !== null) return legacyState === "true";
+  localStorage.setItem("youtubeOverlayVisible", "true");
   return true;
 }
 
-function getVideoPlayer() {
-  return document.querySelector('.html5-video-player') ||
-    document.querySelector('#movie_player') ||
-    document.querySelector('ytd-player') ||
-    document.querySelector('.ytd-player');
-}
-
-function isYouTubeFullscreen() {
-  const player = getVideoPlayer();
-  const isPlayerFs = Boolean(player?.classList?.contains('ytp-fullscreen') || document.querySelector('.html5-video-player.ytp-fullscreen, #movie_player.ytp-fullscreen'));
-  const fsEl = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
-  const isDocFs = Boolean(fsEl && player && (player === fsEl || player.contains(fsEl) || fsEl.contains(player)));
-  return isPlayerFs || isDocFs;
-}
-
-function isYouTubeTheater() {
-  const watch = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
-  return Boolean(watch && watch.hasAttribute('theater'));
-}
-
-function isTheaterModeEnabled() {
-  return localStorage.getItem('chatOverlayTheaterMode') !== 'false';
-}
-
-function isOverlayActiveView() {
-  if (isYouTubeFullscreen()) return true;
-  if (isTheaterModeEnabled() && isYouTubeTheater()) return true;
-  return false;
-}
-
 function removeDuplicateOverlays() {
-  const overlays = Array.from(document.querySelectorAll('#overlay-chat-container'));
-  const toggles = Array.from(document.querySelectorAll('#toggle-chat-overlay'));
+  const overlays = Array.from(
+    document.querySelectorAll("#overlay-chat-container"),
+  );
+  const toggles = Array.from(document.querySelectorAll("#toggle-chat-overlay"));
 
-  overlays.slice(1).forEach((overlay) => overlay.remove());
-  toggles.slice(1).forEach((button) => button.remove());
+  overlays.slice(1).forEach((overlay) => {
+    overlay.remove();
+  });
+  toggles.slice(1).forEach((button) => {
+    button.remove();
+  });
 
   overlayChatContainer = overlays[0] || null;
   toggleButton = toggles[0] || null;
-  chatIframeContainer = overlayChatContainer?.querySelector('#chat-iframe-container') || null;
+  chatIframeContainer =
+    overlayChatContainer?.querySelector("#chat-iframe-container") || null;
 }
 
 function cleanupOverlayEventListeners() {
@@ -77,7 +54,7 @@ function cleanupOverlayEventListeners() {
   attachRetryInterval = null;
 
   if (keyboardShortcutListener) {
-    document.removeEventListener('keydown', keyboardShortcutListener);
+    document.removeEventListener("keydown", keyboardShortcutListener);
     keyboardShortcutListener = null;
   }
   if (messageListener && extApi?.runtime?.onMessage) {
@@ -87,7 +64,7 @@ function cleanupOverlayEventListeners() {
 }
 
 function removeOverlayDom() {
-  document.documentElement.removeAttribute('data-yt-overlay-theater-active');
+  document.documentElement.removeAttribute("data-yt-overlay-theater-active");
   cleanupOverlayEventListeners();
   cleanupOverlay();
   overlayChatContainer = null;
@@ -97,13 +74,18 @@ function removeOverlayDom() {
 
 function ensureOverlayConnected() {
   if (overlayChatContainer?.isConnected && !chatIframeContainer?.isConnected) {
-    let existingContainer = overlayChatContainer.querySelector('#chat-iframe-container');
+    let existingContainer = overlayChatContainer.querySelector(
+      "#chat-iframe-container",
+    );
     if (!existingContainer) {
-      existingContainer = document.createElement('div');
-      existingContainer.id = 'chat-iframe-container';
-      const resizeHandle = overlayChatContainer.querySelector('#resize-handle');
-      overlayChatContainer.insertBefore(existingContainer, resizeHandle || null);
-      debugState('ensureOverlayConnected:rebuilt iframe container', {
+      existingContainer = document.createElement("div");
+      existingContainer.id = "chat-iframe-container";
+      const resizeHandle = overlayChatContainer.querySelector("#resize-handle");
+      overlayChatContainer.insertBefore(
+        existingContainer,
+        resizeHandle || null,
+      );
+      debugState("ensureOverlayConnected:rebuilt iframe container", {
         overlayConnected: overlayChatContainer.isConnected,
         childCount: overlayChatContainer.childElementCount,
       });
@@ -111,7 +93,12 @@ function ensureOverlayConnected() {
     chatIframeContainer = existingContainer;
   }
 
-  if (overlayChatContainer?.isConnected && chatIframeContainer?.isConnected && toggleButton?.isConnected) return true;
+  if (
+    overlayChatContainer?.isConnected &&
+    chatIframeContainer?.isConnected &&
+    toggleButton?.isConnected
+  )
+    return true;
 
   const currentPlayer = getVideoPlayer();
   if (!currentPlayer) return false;
@@ -124,14 +111,21 @@ function ensureOverlayConnected() {
     currentPlayer.appendChild(toggleButton);
   }
 
-  overlayChatContainer = document.getElementById('overlay-chat-container') || overlayChatContainer;
+  overlayChatContainer =
+    document.getElementById("overlay-chat-container") || overlayChatContainer;
   if (overlayChatContainer && !chatIframeContainer?.isConnected) {
-    chatIframeContainer = overlayChatContainer.querySelector('#chat-iframe-container') || chatIframeContainer;
+    chatIframeContainer =
+      overlayChatContainer.querySelector("#chat-iframe-container") ||
+      chatIframeContainer;
   }
-  toggleButton = document.getElementById('toggle-chat-overlay') || toggleButton;
+  toggleButton = document.getElementById("toggle-chat-overlay") || toggleButton;
 
-  const connected = Boolean(overlayChatContainer?.isConnected && chatIframeContainer?.isConnected && toggleButton?.isConnected);
-  debugState('ensureOverlayConnected', {
+  const connected = Boolean(
+    overlayChatContainer?.isConnected &&
+      chatIframeContainer?.isConnected &&
+      toggleButton?.isConnected,
+  );
+  debugState("ensureOverlayConnected", {
     connected,
     overlayConnected: Boolean(overlayChatContainer?.isConnected),
     iframeContainerConnected: Boolean(chatIframeContainer?.isConnected),
@@ -143,18 +137,28 @@ function ensureOverlayConnected() {
 
 function hasChatSource() {
   const mode = detectChatMode();
-  return mode === 'live' || mode === 'archive';
+  return mode === "live" || mode === "archive";
 }
 
 function handleFullscreenChange() {
   removeDuplicateOverlays();
 
-  const isTheaterActive = Boolean(isYouTubeTheater() && !isYouTubeFullscreen() && isTheaterModeEnabled() && hasChatSource());
-  const prevTheaterActive = document.documentElement.hasAttribute('data-yt-overlay-theater-active');
-  document.documentElement.toggleAttribute('data-yt-overlay-theater-active', isTheaterActive);
+  const isTheaterActive = Boolean(
+    isYouTubeTheater() &&
+      !isYouTubeFullscreen() &&
+      isTheaterModeEnabled() &&
+      hasChatSource(),
+  );
+  const prevTheaterActive = document.documentElement.hasAttribute(
+    "data-yt-overlay-theater-active",
+  );
+  document.documentElement.toggleAttribute(
+    "data-yt-overlay-theater-active",
+    isTheaterActive,
+  );
   if (isTheaterActive !== prevTheaterActive) {
     try {
-      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new Event("resize"));
     } catch {}
   }
 
@@ -176,7 +180,7 @@ function handleFullscreenChange() {
   if (!videoPlayer || !overlayChatContainer || !toggleButton) return;
 
   const canShowToggle = hasChatSource();
-  debugState('handleFullscreenChange', () => ({
+  debugState("handleFullscreenChange", () => ({
     fullscreen: isYouTubeFullscreen(),
     theater: isYouTubeTheater(),
     canShowToggle,
@@ -184,12 +188,16 @@ function handleFullscreenChange() {
     videoId: getVideoId(),
     savedVisible: getSavedOverlayVisible(),
   }));
-  toggleButton.style.display = canShowToggle ? 'flex' : 'none';
-  toggleButton.classList.toggle('show', canShowToggle);
+  toggleButton.style.display = canShowToggle ? "flex" : "none";
+  toggleButton.classList.toggle("show", canShowToggle);
 
   if (!canShowToggle) {
     if (isOverlayVisible) {
-      toggleOverlayChat(overlayChatContainer, chatIframeContainer, toggleButton);
+      toggleOverlayChat(
+        overlayChatContainer,
+        chatIframeContainer,
+        toggleButton,
+      );
     }
     return;
   }
@@ -198,15 +206,24 @@ function handleFullscreenChange() {
     toggleOverlayChat(overlayChatContainer, chatIframeContainer, toggleButton);
   }
   if (isOverlayVisible && !isActiveChatIframeLoaded()) startAttachRetry();
-  if (isOverlayVisible && typeof ensureActiveChatThemeOverride === 'function') {
+  if (isOverlayVisible && typeof ensureActiveChatThemeOverride === "function") {
     ensureActiveChatThemeOverride();
   }
 }
 
 function startAttachRetry() {
-  if (attachRetryInterval || !isOverlayVisible || !chatIframeContainer || isActiveChatIframeLoaded()) return;
+  if (
+    attachRetryInterval ||
+    !isOverlayVisible ||
+    !chatIframeContainer ||
+    isActiveChatIframeLoaded()
+  )
+    return;
   const startedAt = Date.now();
-  debugState('startAttachRetry', () => ({ videoId: getVideoId(), mode: detectChatMode() }));
+  debugState("startAttachRetry", () => ({
+    videoId: getVideoId(),
+    mode: detectChatMode(),
+  }));
   attachRetryInterval = setInterval(() => {
     if (!isOverlayVisible || !chatIframeContainer) {
       clearInterval(attachRetryInterval);
@@ -214,16 +231,16 @@ function startAttachRetry() {
       return;
     }
     if (!ensureOverlayConnected()) {
-      debugState('attachRetry:overlay unavailable', { videoId: getVideoId() });
+      debugState("attachRetry:overlay unavailable", { videoId: getVideoId() });
       clearInterval(attachRetryInterval);
       attachRetryInterval = null;
       return;
     }
     attachChatSource(chatIframeContainer);
-    if (typeof ensureActiveChatThemeOverride === 'function') {
+    if (typeof ensureActiveChatThemeOverride === "function") {
       ensureActiveChatThemeOverride();
     }
-    debugState('attachRetry:tick', {
+    debugState("attachRetry:tick", {
       loaded: isActiveChatIframeLoaded(),
       elapsed: Date.now() - startedAt,
       iframeCount: chatIframeContainer.childElementCount,
@@ -245,7 +262,7 @@ function cleanupAllListeners() {
 
   cleanupOverlayEventListeners();
   if (fullscreenChangeListener) {
-    document.removeEventListener('fullscreenchange', fullscreenChangeListener);
+    document.removeEventListener("fullscreenchange", fullscreenChangeListener);
     fullscreenChangeListener = null;
   }
   if (urlObserver) {
@@ -272,14 +289,15 @@ function injectLiveChatOverlay() {
   if (!isOverlayActiveView()) return false;
 
   removeDuplicateOverlays();
-  const existingOverlay = document.getElementById('overlay-chat-container');
-  const existingToggle = document.getElementById('toggle-chat-overlay');
+  const existingOverlay = document.getElementById("overlay-chat-container");
+  const existingToggle = document.getElementById("toggle-chat-overlay");
   if (existingOverlay && existingToggle) {
     overlayChatContainer = existingOverlay;
-    chatIframeContainer = document.getElementById('chat-iframe-container') || chatIframeContainer;
+    chatIframeContainer =
+      document.getElementById("chat-iframe-container") || chatIframeContainer;
     toggleButton = existingToggle;
     videoPlayer = getVideoPlayer() || videoPlayer;
-    debugState('injectLiveChatOverlay:reuse existing', {
+    debugState("injectLiveChatOverlay:reuse existing", {
       overlayConnected: Boolean(overlayChatContainer?.isConnected),
       iframeContainerConnected: Boolean(chatIframeContainer?.isConnected),
       toggleConnected: Boolean(toggleButton?.isConnected),
@@ -291,14 +309,13 @@ function injectLiveChatOverlay() {
   removeOverlayDom();
 
   videoPlayer = getVideoPlayer();
-  debugState('injectLiveChatOverlay:start', () => ({
+  debugState("injectLiveChatOverlay:start", () => ({
     hasVideoPlayer: Boolean(videoPlayer),
     videoId: getVideoId(),
     mode: detectChatMode(),
     url: location.href,
   }));
   if (!videoPlayer || !getVideoId()) {
-    log('Native chat source or video player not ready');
     return false;
   }
 
@@ -308,23 +325,40 @@ function injectLiveChatOverlay() {
     chatIframeContainer = overlay.iframeContainer;
 
     toggleButton = createToggleButton(videoPlayer, () => {
-      toggleOverlayChat(overlayChatContainer, chatIframeContainer, toggleButton);
+      toggleOverlayChat(
+        overlayChatContainer,
+        chatIframeContainer,
+        toggleButton,
+      );
     });
 
     keyboardShortcutListener = (event) => {
-      if (event.altKey && event.key.toLowerCase() === 'c' && isOverlayActiveView() && hasChatSource()) {
-        toggleOverlayChat(overlayChatContainer, chatIframeContainer, toggleButton);
+      if (
+        event.altKey &&
+        event.key.toLowerCase() === "c" &&
+        isOverlayActiveView() &&
+        hasChatSource()
+      ) {
+        toggleOverlayChat(
+          overlayChatContainer,
+          chatIframeContainer,
+          toggleButton,
+        );
       }
     };
-    document.addEventListener('keydown', keyboardShortcutListener);
+    document.addEventListener("keydown", keyboardShortcutListener);
 
-    messageListener = (message, sender, sendResponse) => {
-      if (message.type === 'TOGGLE_OVERLAY') {
-        toggleOverlayChat(overlayChatContainer, chatIframeContainer, toggleButton);
+    messageListener = (message, _sender, sendResponse) => {
+      if (message.type === "TOGGLE_OVERLAY") {
+        toggleOverlayChat(
+          overlayChatContainer,
+          chatIframeContainer,
+          toggleButton,
+        );
         sendResponse({ success: true });
         return true;
       }
-      sendResponse({ error: 'unknown_type' });
+      sendResponse({ error: "unknown_type" });
       return true;
     };
     if (extApi?.runtime?.onMessage) {
@@ -334,16 +368,14 @@ function injectLiveChatOverlay() {
     initializeOverlayState(overlayChatContainer);
     handleFullscreenChange();
     setupUrlObserver();
-    debugState('injectLiveChatOverlay:done', {
+    debugState("injectLiveChatOverlay:done", {
       overlayConnected: overlayChatContainer.isConnected,
       iframeContainerConnected: chatIframeContainer.isConnected,
       toggleConnected: toggleButton.isConnected,
     });
-    log('Native chat iframe overlay injected');
     return true;
   } catch (error) {
-    log('Error during injection: ' + error.message);
-    console.error('Full injection error:', error);
+    console.error("Full injection error:", error);
     return false;
   }
 }
@@ -354,8 +386,8 @@ function handleVideoChange(newVid) {
   currentVideoId = newVid;
   lastUrl = location.href;
 
-  if (typeof invalidateSignalCache === 'function') invalidateSignalCache();
-  if (typeof markChatIframesStale === 'function' && oldVid) {
+  if (typeof invalidateSignalCache === "function") invalidateSignalCache();
+  if (typeof markChatIframesStale === "function" && oldVid) {
     markChatIframesStale(oldVid);
   }
 
@@ -380,7 +412,7 @@ function setupUrlObserver() {
   if (urlObserver) urlObserver.disconnect();
 
   const callback = debounce((mutations) => {
-    const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+    const newVid = typeof getVideoId === "function" ? getVideoId() : null;
     if (newVid && newVid !== currentVideoId) {
       handleVideoChange(newVid);
       return;
@@ -391,7 +423,7 @@ function setupUrlObserver() {
       return;
     }
 
-    if (!mutations) return;
+    if (!isOverlayActiveView() || !mutations) return;
     let hasRelevantChanges = false;
     for (let i = 0; i < mutations.length; i++) {
       const addedNodes = mutations[i].addedNodes;
@@ -399,9 +431,16 @@ function setupUrlObserver() {
       for (let j = 0; j < addedNodes.length; j++) {
         const node = addedNodes[j];
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
-        if (node.id === 'chat' || node.id === 'chatframe' ||
-            node.matches?.('iframe[src*="live_chat"], ytd-live-chat-frame, #chat-container, #secondary') ||
-            node.querySelector?.('iframe[src*="live_chat"], ytd-live-chat-frame, #chat-container, #secondary')) {
+        if (
+          node.id === "chat" ||
+          node.id === "chatframe" ||
+          node.matches?.(
+            'iframe[src*="live_chat"], ytd-live-chat-frame, #chat-container, #secondary',
+          ) ||
+          node.querySelector?.(
+            'iframe[src*="live_chat"], ytd-live-chat-frame, #chat-container, #secondary',
+          )
+        ) {
           hasRelevantChanges = true;
           break;
         }
@@ -425,7 +464,7 @@ function attemptChatDetection() {
     handleVideoChange(vid);
     return true;
   }
-  const existingOverlay = document.getElementById('overlay-chat-container');
+  const existingOverlay = document.getElementById("overlay-chat-container");
   if (existingOverlay) {
     ensureOverlayConnected();
     handleFullscreenChange();
@@ -456,46 +495,59 @@ function startInjection() {
     if (injectionInterval) {
       clearInterval(injectionInterval);
       injectionInterval = null;
-      log('Native chat source detection timed out');
     }
   }, 120000);
 }
 
 function setupPlayerFullscreenObserver() {
-  const player = (videoPlayer && videoPlayer.isConnected) ? videoPlayer : getVideoPlayer();
+  const player =
+    videoPlayer && videoPlayer.isConnected ? videoPlayer : getVideoPlayer();
   if (!player || playerFullscreenObserver) return;
 
   videoPlayer = player;
   playerFullscreenObserver = new MutationObserver(handleFullscreenChange);
-  playerFullscreenObserver.observe(player, { attributes: true, attributeFilter: ['class'] });
+  playerFullscreenObserver.observe(player, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
   handleFullscreenChange();
 }
 
 function setupWatchModeObserver() {
-  const watch = document.querySelector('ytd-watch-flexy, ytd-watch-grid');
+  const watch = document.querySelector("ytd-watch-flexy, ytd-watch-grid");
   if (!watch || watchModeObserver) return;
 
   watchModeObserver = new MutationObserver(handleFullscreenChange);
-  watchModeObserver.observe(watch, { attributes: true, attributeFilter: ['theater', 'fullscreen'] });
+  watchModeObserver.observe(watch, {
+    attributes: true,
+    attributeFilter: ["theater", "fullscreen"],
+  });
 }
 
 function initializeLifecycle() {
   if (!fullscreenChangeListener) {
     fullscreenChangeListener = handleFullscreenChange;
-    document.addEventListener('fullscreenchange', fullscreenChangeListener, { passive: true });
+    document.addEventListener("fullscreenchange", fullscreenChangeListener, {
+      passive: true,
+    });
   }
   setupPlayerFullscreenObserver();
   setupWatchModeObserver();
   setupUrlObserver();
 
-  if (!nativeTheaterLayoutController && typeof NativeLayoutNormalModeInTheater === 'function') {
-    nativeTheaterLayoutController = NativeLayoutNormalModeInTheater({ target: 'normal' });
+  if (
+    !nativeTheaterLayoutController &&
+    typeof NativeLayoutNormalModeInTheater === "function"
+  ) {
+    nativeTheaterLayoutController = NativeLayoutNormalModeInTheater({
+      target: "normal",
+    });
     nativeTheaterLayoutController.init();
   }
 
   if (lifecycleInterval) return;
   lifecycleInterval = setInterval(() => {
-    const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+    const newVid = typeof getVideoId === "function" ? getVideoId() : null;
     if (newVid && newVid !== currentVideoId) {
       handleVideoChange(newVid);
       return;
@@ -510,7 +562,12 @@ function initializeLifecycle() {
     }
 
     // Only inject if overlay DOM is missing or detached
-    if (!overlayChatContainer || !overlayChatContainer.isConnected || !toggleButton || !toggleButton.isConnected) {
+    if (
+      !overlayChatContainer ||
+      !overlayChatContainer.isConnected ||
+      !toggleButton ||
+      !toggleButton.isConnected
+    ) {
       startInjection();
       return;
     }
@@ -518,40 +575,45 @@ function initializeLifecycle() {
     // YouTube starts its native chat a moment after the fullscreen swap. Once it
     // is running, adopt it so only one live chat document stays alive instead of
     // ours plus the hidden native one (docs/perf-findings.md, finding #1).
-    if (chatIframeContainer && typeof shouldUpgradeToNativeChat === 'function' && shouldUpgradeToNativeChat()) {
+    if (
+      chatIframeContainer &&
+      typeof shouldUpgradeToNativeChat === "function" &&
+      shouldUpgradeToNativeChat()
+    ) {
       attachChatSource(chatIframeContainer);
     }
   }, 1000);
 }
 
-if (document.readyState === 'complete') {
+if (document.readyState === "complete") {
   initializeLifecycle();
 } else {
-  window.addEventListener('load', initializeLifecycle, { once: true });
+  window.addEventListener("load", initializeLifecycle, { once: true });
 }
 
-document.addEventListener('yt-navigate-start', () => {
-  if (typeof invalidateSignalCache === 'function') invalidateSignalCache();
-  const oldVid = currentVideoId || (typeof getVideoId === 'function' ? getVideoId() : null);
-  if (typeof markChatIframesStale === 'function' && oldVid) {
+document.addEventListener("yt-navigate-start", () => {
+  if (typeof invalidateSignalCache === "function") invalidateSignalCache();
+  const oldVid =
+    currentVideoId || (typeof getVideoId === "function" ? getVideoId() : null);
+  if (typeof markChatIframesStale === "function" && oldVid) {
     markChatIframesStale(oldVid);
   }
   removeOverlayDom();
 });
 
-document.addEventListener('yt-navigate-finish', () => {
-  const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+document.addEventListener("yt-navigate-finish", () => {
+  const newVid = typeof getVideoId === "function" ? getVideoId() : null;
   handleVideoChange(newVid);
 });
 
-document.addEventListener('yt-page-data-updated', () => {
-  const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+document.addEventListener("yt-page-data-updated", () => {
+  const newVid = typeof getVideoId === "function" ? getVideoId() : null;
   handleVideoChange(newVid);
 });
 
-window.addEventListener('popstate', () => {
-  const newVid = typeof getVideoId === 'function' ? getVideoId() : null;
+window.addEventListener("popstate", () => {
+  const newVid = typeof getVideoId === "function" ? getVideoId() : null;
   handleVideoChange(newVid);
 });
 
-window.addEventListener('unload', cleanupAllListeners);
+window.addEventListener("unload", cleanupAllListeners);

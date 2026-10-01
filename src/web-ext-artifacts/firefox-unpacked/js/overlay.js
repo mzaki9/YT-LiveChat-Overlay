@@ -19,17 +19,27 @@ function createToggleIcon(active) {
     stroke: "currentColor",
     "stroke-width": "2",
     "stroke-linecap": "round",
-    "stroke-linejoin": "round"
+    "stroke-linejoin": "round",
   });
 
   if (active) {
-    const line1 = createSvgElement("line", { x1: "18", y1: "6", x2: "6", y2: "18" });
-    const line2 = createSvgElement("line", { x1: "6", y1: "6", x2: "18", y2: "18" });
+    const line1 = createSvgElement("line", {
+      x1: "18",
+      y1: "6",
+      x2: "6",
+      y2: "18",
+    });
+    const line2 = createSvgElement("line", {
+      x1: "6",
+      y1: "6",
+      x2: "18",
+      y2: "18",
+    });
     svg.appendChild(line1);
     svg.appendChild(line2);
   } else {
     const path = createSvgElement("path", {
-      d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+      d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
     });
     svg.appendChild(path);
   }
@@ -61,7 +71,10 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   });
 
   document.addEventListener("click", (event) => {
-    if (!settingsPanel.contains(event.target) && event.target !== settingsIcon) {
+    if (
+      !settingsPanel.contains(event.target) &&
+      event.target !== settingsIcon
+    ) {
       settingsPanel.classList.remove("show");
       container.classList.remove("settings-open");
     }
@@ -96,7 +109,8 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   });
 
   const seamlessToggle = settingsPanel.querySelector("#seamless-mode-toggle");
-  const savedSeamlessMode = localStorage.getItem("chatOverlaySeamlessMode") === "true";
+  const savedSeamlessMode =
+    localStorage.getItem("chatOverlaySeamlessMode") === "true";
   seamlessToggle.checked = savedSeamlessMode;
   container.classList.toggle("seamless", savedSeamlessMode);
   seamlessToggle.addEventListener("change", (event) => {
@@ -107,26 +121,39 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   });
 
   const tickerToggle = settingsPanel.querySelector("#hide-ticker-toggle");
-  const savedHideTicker = localStorage.getItem("chatOverlayHideTicker") === "true";
+  const savedHideTicker =
+    localStorage.getItem("chatOverlayHideTicker") === "true";
   tickerToggle.checked = savedHideTicker;
 
   const headerToggle = settingsPanel.querySelector("#hide-header-toggle");
-  const savedHideHeader = localStorage.getItem("chatOverlayHideHeader") === "true";
+  const savedHideHeader =
+    localStorage.getItem("chatOverlayHideHeader") === "true";
   headerToggle.checked = savedHideHeader;
 
-  const autoHideHeaderToggle = settingsPanel.querySelector("#auto-hide-header-toggle");
-  const savedAutoHideHeader = localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
+  const autoHideHeaderToggle = settingsPanel.querySelector(
+    "#auto-hide-header-toggle",
+  );
+  const savedAutoHideHeader =
+    localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
   autoHideHeaderToggle.checked = savedAutoHideHeader;
 
   const inputToggle = settingsPanel.querySelector("#hide-input-toggle");
-  const savedHideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
+  const savedHideInput =
+    localStorage.getItem("chatOverlayHideInput") !== "false";
   if (inputToggle) inputToggle.checked = savedHideInput;
 
-  const stealthReplayToggle = settingsPanel.querySelector("#hide-native-replay-toggle");
+  const stealthReplayToggle = settingsPanel.querySelector(
+    "#hide-native-replay-toggle",
+  );
   const savedStealthReplay = isStealthReplayEnabled();
   if (stealthReplayToggle) stealthReplayToggle.checked = savedStealthReplay;
 
-  applyTickerHideStyle(savedHideTicker, savedHideHeader, savedAutoHideHeader, savedHideInput);
+  applyTickerHideStyle(
+    savedHideTicker,
+    savedHideHeader,
+    savedAutoHideHeader,
+    savedHideInput,
+  );
   applyStealthReplayStyle(savedStealthReplay);
 
   function syncThemeStyles() {
@@ -134,7 +161,9 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
     const hideHeader = headerToggle.checked;
     const autoHideHeader = autoHideHeaderToggle.checked;
     const hideInput = inputToggle ? inputToggle.checked : true;
-    const hideStealthReplay = stealthReplayToggle ? stealthReplayToggle.checked : true;
+    const hideStealthReplay = stealthReplayToggle
+      ? stealthReplayToggle.checked
+      : true;
     localStorage.setItem("chatOverlayHideTicker", hideTicker);
     localStorage.setItem("chatOverlayHideHeader", hideHeader);
     localStorage.setItem("chatOverlayAutoHideHeader", autoHideHeader);
@@ -174,7 +203,8 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
   }
 
   const theaterToggle = settingsPanel.querySelector("#theater-mode-toggle");
-  const savedTheaterMode = typeof isTheaterModeEnabled === "function" ? isTheaterModeEnabled() : true;
+  const savedTheaterMode =
+    typeof isTheaterModeEnabled === "function" ? isTheaterModeEnabled() : true;
   if (theaterToggle) {
     theaterToggle.checked = savedTheaterMode;
     theaterToggle.addEventListener("change", (event) => {
@@ -187,7 +217,9 @@ function setupSettingsPanel(settingsIcon, settingsPanel, container) {
     });
   }
 
-  settingsPanel.addEventListener("mousedown", (event) => event.stopPropagation());
+  settingsPanel.addEventListener("mousedown", (event) =>
+    event.stopPropagation(),
+  );
   settingsPanel.addEventListener("click", (event) => event.stopPropagation());
   settingsPanel.addEventListener("keydown", (event) => event.stopPropagation());
 }
@@ -199,11 +231,11 @@ function createSettingsIconElement() {
   const svg = createSvgElement("svg", {
     viewBox: "0 0 24 24",
     width: "16",
-    height: "16"
+    height: "16",
   });
   const path = createSvgElement("path", {
     fill: "currentColor",
-    d: "M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+    d: "M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z",
   });
   svg.appendChild(path);
   settingsIcon.appendChild(svg);
@@ -312,7 +344,8 @@ function createSettingsPanelElement() {
   inputLabelText.textContent = "Hide chat controls";
   const inputDescription = document.createElement("span");
   inputDescription.className = "toggle-control-description";
-  inputDescription.textContent = "Message box, reactions, and Super Chat buttons.";
+  inputDescription.textContent =
+    "Message box, reactions, and Super Chat buttons.";
   inputLabel.appendChild(inputLabelText);
   inputLabel.appendChild(inputDescription);
   const inputInput = document.createElement("input");
@@ -345,13 +378,15 @@ function createSettingsPanelElement() {
   theaterLabelText.textContent = "Enable in theater mode";
   const theaterDescription = document.createElement("span");
   theaterDescription.className = "toggle-control-description";
-  theaterDescription.textContent = "Replace native chat panel with overlay in theater mode.";
+  theaterDescription.textContent =
+    "Replace native chat panel with overlay in theater mode.";
   theaterLabel.appendChild(theaterLabelText);
   theaterLabel.appendChild(theaterDescription);
   const theaterInput = document.createElement("input");
   theaterInput.type = "checkbox";
   theaterInput.id = "theater-mode-toggle";
-  theaterInput.checked = typeof isTheaterModeEnabled === "function" ? isTheaterModeEnabled() : true;
+  theaterInput.checked =
+    typeof isTheaterModeEnabled === "function" ? isTheaterModeEnabled() : true;
   theaterRow.appendChild(theaterLabel);
   theaterRow.appendChild(theaterInput);
   panel.appendChild(theaterRow);
@@ -404,7 +439,8 @@ function createChatOverlay(videoPlayer) {
 
 function restoreContainerPosition(container) {
   const parentWidth = container.offsetParent?.clientWidth || window.innerWidth;
-  const parentHeight = container.offsetParent?.clientHeight || window.innerHeight;
+  const parentHeight =
+    container.offsetParent?.clientHeight || window.innerHeight;
   const savedLeft = localStorage.getItem("chatOverlayLeft");
   const savedTop = localStorage.getItem("chatOverlayTop");
   const savedWidth = localStorage.getItem("chatOverlayWidth");
@@ -453,7 +489,8 @@ function createManagedLiveIframe(source) {
       durationMs: duration,
       src: iframe.getAttribute("src") || iframe.src || "",
       href: getIframeHref(iframe),
-      parent: iframe.parentElement?.id || iframe.parentElement?.tagName || "none",
+      parent:
+        iframe.parentElement?.id || iframe.parentElement?.tagName || "none",
     });
   });
   iframe.addEventListener("error", () => {
@@ -465,12 +502,19 @@ function createManagedLiveIframe(source) {
   return iframe;
 }
 
-function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hideInput = true) {
-  const tickerRules = hideTicker ? `
+function getThemeOverrideCss(
+  hideTicker,
+  hideHeader,
+  autoHideHeader = true,
+  hideInput = true,
+) {
+  const tickerRules = hideTicker
+    ? `
     yt-live-chat-ticker-renderer {
       display: none !important;
     }
-  ` : `
+  `
+    : `
     yt-live-chat-ticker-renderer,
     yt-live-chat-ticker-renderer #container,
     yt-live-chat-ticker-renderer #items,
@@ -530,7 +574,8 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
     `;
   }
 
-  const inputRules = hideInput ? `
+  const inputRules = hideInput
+    ? `
     #input-panel,
     yt-live-chat-message-input-renderer,
     yt-reaction-control-panel-overlay-renderer,
@@ -545,7 +590,8 @@ function getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader = true, hide
       margin-bottom: 0 !important;
       padding-bottom: 8px !important;
     }
-  ` : `
+  `
+    : `
     #input-panel,
     #input-panel.yt-live-chat-renderer,
     yt-live-chat-message-input-renderer,
@@ -902,7 +948,9 @@ function setupChatIframeBannerInteractions(doc) {
 
   function closeAllTooltips() {
     try {
-      const tooltips = doc.querySelectorAll("tp-yt-paper-tooltip, yt-tooltip-renderer, #tooltip");
+      const tooltips = doc.querySelectorAll(
+        "tp-yt-paper-tooltip, yt-tooltip-renderer, #tooltip",
+      );
       tooltips.forEach((t) => {
         t.style.setProperty("display", "none", "important");
         if (typeof t.hide === "function") t.hide();
@@ -911,7 +959,9 @@ function setupChatIframeBannerInteractions(doc) {
   }
 
   function dismissActiveBanner() {
-    const banners = doc.querySelectorAll("yt-live-chat-banner-renderer, yt-live-chat-banner-manager, #live-chat-banner");
+    const banners = doc.querySelectorAll(
+      "yt-live-chat-banner-renderer, yt-live-chat-banner-manager, #live-chat-banner",
+    );
     banners.forEach((b) => {
       b.classList.add("yt-overlay-dismissed");
       b.style.setProperty("display", "none", "important");
@@ -921,7 +971,9 @@ function setupChatIframeBannerInteractions(doc) {
   }
 
   function dismissActivePoll() {
-    const polls = doc.querySelectorAll("yt-live-chat-poll-renderer, #action-panel, yt-live-chat-banner-poll-renderer");
+    const polls = doc.querySelectorAll(
+      "yt-live-chat-poll-renderer, #action-panel, yt-live-chat-banner-poll-renderer",
+    );
     polls.forEach((p) => {
       p.classList.add("yt-overlay-dismissed");
       p.style.setProperty("display", "none", "important");
@@ -967,31 +1019,54 @@ function setupChatIframeBannerInteractions(doc) {
     menu.className = "yt-overlay-banner-menu";
 
     function createMenuSvg(pathD) {
-      const svg = createSvgElement("svg", { viewBox: "0 0 24 24", width: "16", height: "16", fill: "currentColor" });
+      const svg = createSvgElement("svg", {
+        viewBox: "0 0 24 24",
+        width: "16",
+        height: "16",
+        fill: "currentColor",
+      });
       const path = createSvgElement("path", { d: pathD });
       svg.appendChild(path);
       return svg;
     }
 
-    const hasPoll = Boolean(doc.querySelector("yt-live-chat-poll-renderer, #action-panel yt-live-chat-poll-renderer, [class*='poll']"));
+    const hasPoll = Boolean(
+      doc.querySelector(
+        "yt-live-chat-poll-renderer, #action-panel yt-live-chat-poll-renderer, [class*='poll']",
+      ),
+    );
     const items = [
       {
-        createIcon: () => createMenuSvg("M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"),
+        createIcon: () =>
+          createMenuSvg(
+            "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+          ),
         label: "Close pinned chat",
         action: dismissActiveBanner,
       },
-      ...(hasPoll ? [{
-        createIcon: () => createMenuSvg("M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"),
-        label: "Close polling",
-        action: dismissActivePoll,
-      }] : []),
+      ...(hasPoll
+        ? [
+            {
+              createIcon: () =>
+                createMenuSvg(
+                  "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z",
+                ),
+              label: "Close polling",
+              action: dismissActivePoll,
+            },
+          ]
+        : []),
       {
-        createIcon: () => createMenuSvg("M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"),
+        createIcon: () =>
+          createMenuSvg("M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"),
         label: "Collapse / expand banner",
         action: toggleBannerCollapse,
       },
       {
-        createIcon: () => createMenuSvg("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"),
+        createIcon: () =>
+          createMenuSvg(
+            "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z",
+          ),
         label: "Close all tooltips",
         action: closeAllTooltips,
       },
@@ -1001,7 +1076,8 @@ function setupChatIframeBannerInteractions(doc) {
       const itemEl = doc.createElement("div");
       itemEl.className = "yt-overlay-banner-menu-item";
       const iconSpan = doc.createElement("span");
-      iconSpan.style.cssText = "display:inline-flex;align-items:center;margin-right:8px;opacity:0.85;";
+      iconSpan.style.cssText =
+        "display:inline-flex;align-items:center;margin-right:8px;opacity:0.85;";
       iconSpan.appendChild(it.createIcon());
       const labelSpan = doc.createElement("span");
       labelSpan.textContent = it.label;
@@ -1016,7 +1092,8 @@ function setupChatIframeBannerInteractions(doc) {
     });
 
     const rect = targetBtn.getBoundingClientRect();
-    const docWidth = doc.documentElement.clientWidth || doc.body.clientWidth || 300;
+    const docWidth =
+      doc.documentElement.clientWidth || doc.body.clientWidth || 300;
     menu.style.position = "absolute";
     menu.style.top = `${Math.max(4, rect.bottom + 4)}px`;
     menu.style.right = `${Math.max(8, docWidth - rect.right)}px`;
@@ -1024,22 +1101,29 @@ function setupChatIframeBannerInteractions(doc) {
     doc.body.appendChild(menu);
   }
 
-  doc.addEventListener("click", (e) => {
-    closeAllTooltips();
+  doc.addEventListener(
+    "click",
+    (e) => {
+      closeAllTooltips();
 
-    const clickedMenu = e.target.closest(".yt-overlay-banner-menu");
-    if (!clickedMenu) {
-      closeCustomBannerMenu();
-    }
+      const clickedMenu = e.target.closest(".yt-overlay-banner-menu");
+      if (!clickedMenu) {
+        closeCustomBannerMenu();
+      }
 
-    const bannerBtn = e.target.closest(
-      "yt-button-renderer.yt-live-chat-banner-header-renderer, yt-live-chat-banner-header-renderer button, yt-live-chat-banner-header-renderer yt-button-shape"
-    );
-    if (bannerBtn && !bannerBtn.classList.contains("yt-overlay-banner-close-btn")) {
-      e.stopPropagation();
-      showCustomBannerMenu(bannerBtn);
-    }
-  }, true);
+      const bannerBtn = e.target.closest(
+        "yt-button-renderer.yt-live-chat-banner-header-renderer, yt-live-chat-banner-header-renderer button, yt-live-chat-banner-header-renderer yt-button-shape",
+      );
+      if (
+        bannerBtn &&
+        !bannerBtn.classList.contains("yt-overlay-banner-close-btn")
+      ) {
+        e.stopPropagation();
+        showCustomBannerMenu(bannerBtn);
+      }
+    },
+    true,
+  );
 
   function ensureBannerControls() {
     const headers = doc.querySelectorAll("yt-live-chat-banner-header-renderer");
@@ -1050,8 +1134,15 @@ function setupChatIframeBannerInteractions(doc) {
       closeBtn.setAttribute("type", "button");
       closeBtn.setAttribute("title", "Close banner");
       closeBtn.setAttribute("aria-label", "Close banner");
-      const closeSvg = createSvgElement("svg", { viewBox: "0 0 24 24", width: "14", height: "14", fill: "currentColor" });
-      const closePath = createSvgElement("path", { d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" });
+      const closeSvg = createSvgElement("svg", {
+        viewBox: "0 0 24 24",
+        width: "14",
+        height: "14",
+        fill: "currentColor",
+      });
+      const closePath = createSvgElement("path", {
+        d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+      });
       closeSvg.appendChild(closePath);
       closeBtn.appendChild(closeSvg);
       closeBtn.addEventListener("click", (ev) => {
@@ -1084,7 +1175,9 @@ function setupChatIframeBannerInteractions(doc) {
         if (
           tname.includes("banner") ||
           (target.id && target.id.includes("banner")) ||
-          target.closest?.("yt-live-chat-banner-manager-renderer, yt-live-chat-banner-header-renderer")
+          target.closest?.(
+            "yt-live-chat-banner-manager-renderer, yt-live-chat-banner-header-renderer",
+          )
         ) {
           hasRelevantMutation = true;
           break;
@@ -1096,13 +1189,18 @@ function setupChatIframeBannerInteractions(doc) {
           if (node.classList?.contains("yt-overlay-banner-close-btn")) continue;
           const nname = node.tagName.toLowerCase();
           // Fast skip for high-frequency chat message rows and tickers
-          if (nname.includes("message") || nname.includes("item") || nname.includes("ticker")) {
+          if (
+            nname.includes("message") ||
+            nname.includes("item") ||
+            nname.includes("ticker")
+          ) {
             continue;
           }
           if (
             nname.includes("banner") ||
             (node.id && node.id.includes("banner")) ||
-            (node.querySelector && node.querySelector("yt-live-chat-banner-header-renderer"))
+            (node.querySelector &&
+              node.querySelector("yt-live-chat-banner-header-renderer"))
           ) {
             hasRelevantMutation = true;
             break;
@@ -1116,7 +1214,12 @@ function setupChatIframeBannerInteractions(doc) {
     }
   });
 
-  const observeTarget = doc.querySelector("yt-live-chat-banner-manager-renderer, #banner-container") || doc.body || doc.documentElement;
+  const observeTarget =
+    doc.querySelector(
+      "yt-live-chat-banner-manager-renderer, #banner-container",
+    ) ||
+    doc.body ||
+    doc.documentElement;
   if (observeTarget) {
     observer.observe(observeTarget, {
       childList: true,
@@ -1140,10 +1243,16 @@ function injectChatIframeThemeOverride(iframe) {
     try {
       hideTicker = localStorage.getItem("chatOverlayHideTicker") === "true";
       hideHeader = localStorage.getItem("chatOverlayHideHeader") === "true";
-      autoHideHeader = localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
+      autoHideHeader =
+        localStorage.getItem("chatOverlayAutoHideHeader") !== "false";
       hideInput = localStorage.getItem("chatOverlayHideInput") !== "false";
     } catch {}
-    const css = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
+    const css = getThemeOverrideCss(
+      hideTicker,
+      hideHeader,
+      autoHideHeader,
+      hideInput,
+    );
 
     let style = doc.getElementById("yt-overlay-theme-override");
     if (!style) {
@@ -1168,7 +1277,11 @@ function injectChatIframeThemeOverride(iframe) {
 let themeOverrideWatcherTimer = null;
 
 function ensureActiveChatThemeOverride() {
-  const target = activeChatIframe || document.querySelector("#chat-iframe-container iframe, iframe[data-yt-overlay-chat='true']");
+  const target =
+    activeChatIframe ||
+    document.querySelector(
+      "#chat-iframe-container iframe, iframe[data-yt-overlay-chat='true']",
+    );
   if (!target || !target.isConnected) return false;
   return injectChatIframeThemeOverride(target);
 }
@@ -1181,7 +1294,12 @@ function startThemeOverrideWatcher(iframe) {
   let ticks = 0;
   themeOverrideWatcherTimer = setInterval(() => {
     ticks++;
-    const target = iframe || activeChatIframe || document.querySelector("#chat-iframe-container iframe, iframe[data-yt-overlay-chat='true']");
+    const target =
+      iframe ||
+      activeChatIframe ||
+      document.querySelector(
+        "#chat-iframe-container iframe, iframe[data-yt-overlay-chat='true']",
+      );
     if (!target || !target.isConnected) {
       clearInterval(themeOverrideWatcherTimer);
       themeOverrideWatcherTimer = null;
@@ -1195,8 +1313,15 @@ function startThemeOverrideWatcher(iframe) {
   }, 500);
 }
 
-function applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader = true, hideInput = true) {
-  const iframes = new Set(document.querySelectorAll("iframe[data-yt-overlay-chat='true']"));
+function applyTickerHideStyle(
+  hideTicker,
+  hideHeader,
+  autoHideHeader = true,
+  hideInput = true,
+) {
+  const iframes = new Set(
+    document.querySelectorAll("iframe[data-yt-overlay-chat='true']"),
+  );
   if (activeChatIframe) iframes.add(activeChatIframe);
   iframes.forEach((iframe) => {
     try {
@@ -1210,7 +1335,12 @@ function applyTickerHideStyle(hideTicker, hideHeader, autoHideHeader = true, hid
         style.id = "yt-overlay-theme-override";
         root.appendChild(style);
       }
-      style.textContent = getThemeOverrideCss(hideTicker, hideHeader, autoHideHeader, hideInput);
+      style.textContent = getThemeOverrideCss(
+        hideTicker,
+        hideHeader,
+        autoHideHeader,
+        hideInput,
+      );
       setupChatIframeBannerInteractions(doc);
     } catch {}
   });
@@ -1227,14 +1357,17 @@ function applyStealthReplayStyle() {
 }
 
 function isManagedLiveIframe(iframe) {
-  return iframe?.getAttribute("data-yt-overlay-owned") === "true" &&
-    iframe?.getAttribute("data-yt-overlay-source") === "live_direct";
+  return (
+    iframe?.getAttribute("data-yt-overlay-owned") === "true" &&
+    iframe?.getAttribute("data-yt-overlay-source") === "live_direct"
+  );
 }
 
 function getReusableLiveIframe(source) {
   if (!isManagedLiveIframe(activeChatIframe)) return null;
   const href = getIframeHref(activeChatIframe);
-  const src = activeChatIframe.getAttribute("src") || activeChatIframe.src || "";
+  const src =
+    activeChatIframe.getAttribute("src") || activeChatIframe.src || "";
   if (href === source.url || src === source.url) return activeChatIframe;
   return null;
 }
@@ -1291,7 +1424,10 @@ function restoreBorrowedIframe(iframe) {
   iframe.style.backgroundColor = target.style.backgroundColor;
 
   if (target.placeholder?.parentNode) {
-    target.placeholder.parentNode.insertBefore(iframe, target.placeholder.nextSibling);
+    target.placeholder.parentNode.insertBefore(
+      iframe,
+      target.placeholder.nextSibling,
+    );
     target.placeholder.remove();
     borrowedIframeRestoreTarget = null;
     return true;
@@ -1335,8 +1471,13 @@ function queueRestoreToNativeHost(iframe) {
   pendingNativeHostRestoreIframes.add(iframe);
   iframe.remove();
   if (!pendingNativeHostRestoreObserver && document.body) {
-    pendingNativeHostRestoreObserver = new MutationObserver(tryRestorePendingNativeIframes);
-    pendingNativeHostRestoreObserver.observe(document.body, { childList: true, subtree: true });
+    pendingNativeHostRestoreObserver = new MutationObserver(
+      tryRestorePendingNativeIframes,
+    );
+    pendingNativeHostRestoreObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
   }
   tryRestorePendingNativeIframes();
 }
@@ -1365,7 +1506,10 @@ function attachChatSource(iframeContainer) {
   }
 
   const currentVideoId = getVideoId();
-  if (activeChatIframe && !isIframeForCurrentVideo(activeChatIframe, currentVideoId)) {
+  if (
+    activeChatIframe &&
+    !isIframeForCurrentVideo(activeChatIframe, currentVideoId)
+  ) {
     debugState("attachChatSource:detaching stale iframe", {
       activeVideo: activeChatIframe.getAttribute("data-yt-overlay-video"),
       currentVideoId,
@@ -1373,7 +1517,9 @@ function attachChatSource(iframeContainer) {
     detachChatSource();
   }
 
-  const duplicateIframes = iframeContainer.querySelectorAll('iframe[data-yt-overlay-chat="true"]');
+  const duplicateIframes = iframeContainer.querySelectorAll(
+    'iframe[data-yt-overlay-chat="true"]',
+  );
   duplicateIframes.forEach((iframe) => {
     if (iframe !== activeChatIframe) iframe.remove();
   });
@@ -1390,10 +1536,19 @@ function attachChatSource(iframeContainer) {
     debugState("attachChatSource:openArchiveNativeChatPanel", {});
     openArchiveNativeChatPanel();
   }
-  const source = mode === "archive" ? resolveArchiveChatSource(activeChatIframe) : resolveLiveChatSource(activeChatIframe);
+  const source =
+    mode === "archive"
+      ? resolveArchiveChatSource(activeChatIframe)
+      : resolveLiveChatSource(activeChatIframe);
   if (!source) {
-    if (activeChatIframe && activeChatIframe.parentElement === iframeContainer && isReplayChatIframe(activeChatIframe)) {
-      debugState("attachChatSource:pending replay reload", { href: getIframeHref(activeChatIframe) });
+    if (
+      activeChatIframe &&
+      activeChatIframe.parentElement === iframeContainer &&
+      isReplayChatIframe(activeChatIframe)
+    ) {
+      debugState("attachChatSource:pending replay reload", {
+        href: getIframeHref(activeChatIframe),
+      });
       return true;
     }
     debugState("attachChatSource:no source", {
@@ -1409,8 +1564,13 @@ function attachChatSource(iframeContainer) {
     url: source.url || getIframeHref(source.iframe),
   });
 
-  const nextIframe = isBorrowedSourceKind(source.kind) ? source.iframe : (getReusableLiveIframe(source) || createManagedLiveIframe(source));
-  if (activeChatIframe === nextIframe && nextIframe.parentElement === iframeContainer) {
+  const nextIframe = isBorrowedSourceKind(source.kind)
+    ? source.iframe
+    : getReusableLiveIframe(source) || createManagedLiveIframe(source);
+  if (
+    activeChatIframe === nextIframe &&
+    nextIframe.parentElement === iframeContainer
+  ) {
     debugState("attachChatSource:reuse", { href: getIframeHref(nextIframe) });
     injectChatIframeThemeOverride(activeChatIframe);
     return true;
@@ -1433,10 +1593,14 @@ function attachChatSource(iframeContainer) {
   iframeContainer.appendChild(activeChatIframe);
   injectChatIframeThemeOverride(activeChatIframe);
   startThemeOverrideWatcher(activeChatIframe);
-  activeChatIframe.addEventListener("load", () => {
-    injectChatIframeThemeOverride(activeChatIframe);
-    startThemeOverrideWatcher(activeChatIframe);
-  }, { once: true });
+  activeChatIframe.addEventListener(
+    "load",
+    () => {
+      injectChatIframeThemeOverride(activeChatIframe);
+      startThemeOverrideWatcher(activeChatIframe);
+    },
+    { once: true },
+  );
   debugState("attachChatSource:appended", {
     kind: activeChatSourceKind,
     childCount: iframeContainer.childElementCount,
@@ -1449,7 +1613,12 @@ function attachChatSource(iframeContainer) {
 
 function isActiveChatIframeLoaded() {
   const href = getIframeHref(activeChatIframe);
-  return Boolean(activeChatIframe?.isConnected && href && !href.includes("about:blank") && isIframeForCurrentVideo(activeChatIframe, getVideoId()));
+  return Boolean(
+    activeChatIframe?.isConnected &&
+      href &&
+      !href.includes("about:blank") &&
+      isIframeForCurrentVideo(activeChatIframe, getVideoId()),
+  );
 }
 
 function detachChatSource() {
@@ -1465,11 +1634,14 @@ function detachChatSource() {
     if (currentSrc && !currentSrc.includes("about:blank")) {
       activeChatIframe.setAttribute("data-yt-overlay-stale-src", currentSrc);
     }
-    const currentVid = activeChatIframe.getAttribute("data-yt-overlay-video") || getVideoId();
+    const currentVid =
+      activeChatIframe.getAttribute("data-yt-overlay-video") || getVideoId();
     if (currentVid) {
       activeChatIframe.setAttribute("data-yt-overlay-video", currentVid);
     }
-    const restored = restoreBorrowedIframe(activeChatIframe) || restoreIframeToNativeHost(activeChatIframe);
+    const restored =
+      restoreBorrowedIframe(activeChatIframe) ||
+      restoreIframeToNativeHost(activeChatIframe);
     if (!restored) queueRestoreToNativeHost(activeChatIframe);
   } else {
     activeChatIframe.removeAttribute("data-yt-overlay-video");
@@ -1486,12 +1658,22 @@ function detachChatSource() {
   activeChatSourceKind = null;
 }
 
-function toggleOverlayChat(overlayChatContainer, iframeContainer, toggleButton) {
+function toggleOverlayChat(
+  overlayChatContainer,
+  iframeContainer,
+  toggleButton,
+) {
   isOverlayVisible = !isOverlayVisible;
-  debugState("toggleOverlayChat", () => ({ visible: isOverlayVisible, videoId: getVideoId(), mode: detectChatMode(activeChatIframe) }));
+  debugState("toggleOverlayChat", () => ({
+    visible: isOverlayVisible,
+    videoId: getVideoId(),
+    mode: detectChatMode(activeChatIframe),
+  }));
   overlayChatContainer.style.display = isOverlayVisible ? "block" : "none";
   overlayChatContainer.classList.toggle("show", isOverlayVisible);
-  toggleButton.title = isOverlayVisible ? "Hide chat overlay" : "Show chat overlay";
+  toggleButton.title = isOverlayVisible
+    ? "Hide chat overlay"
+    : "Show chat overlay";
   updateToggleButtonIcon(toggleButton, isOverlayVisible);
 
   if (isOverlayVisible) {
@@ -1513,15 +1695,20 @@ function initializeOverlayState(overlayChatContainer) {
   const blurVal = rawSavedBlur !== null ? Number(rawSavedBlur) : 8;
   overlayChatContainer.style.backdropFilter = `blur(${blurVal}px)`;
   overlayChatContainer.style.webkitBackdropFilter = `blur(${blurVal}px)`;
-  log("Overlay state initialized with native chat iframe source");
 }
 
 function cleanupOverlay() {
   detachChatSource();
 
   const existingOverlays = document.querySelectorAll("#overlay-chat-container");
-  const existingToggleButtons = document.querySelectorAll("#toggle-chat-overlay");
-  existingOverlays.forEach((overlay) => overlay.remove());
-  existingToggleButtons.forEach((button) => button.remove());
+  const existingToggleButtons = document.querySelectorAll(
+    "#toggle-chat-overlay",
+  );
+  existingOverlays.forEach((overlay) => {
+    overlay.remove();
+  });
+  existingToggleButtons.forEach((button) => {
+    button.remove();
+  });
   isOverlayVisible = false;
 }

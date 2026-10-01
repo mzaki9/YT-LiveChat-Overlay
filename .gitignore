@@ -3,3 +3,4 @@ skills-lock.json
 /.debug/
 /.playwright-mcp/
 /test-results/
+node_modules/

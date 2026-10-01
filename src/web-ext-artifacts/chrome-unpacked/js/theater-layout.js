@@ -1,30 +1,25 @@
 /**
  * NativeLayoutNormalModeInTheater
- * 
- * Recreates the spatial relationships and responsive layout of a normal
- * YouTube video in Theater Mode when chat is removed or hidden.
- * 
+ *
+ * Normalizes YouTube video layout in Theater Mode when chat is removed or hidden,
+ * restoring the spatial proportions of a standard on-demand video.
+ *
  * Signature:
  * NativeLayoutNormalModeInTheater :: Config -> Controller
  */
 
 function NativeLayoutNormalModeInTheater(userConfig) {
-  'use strict';
-
   const DEFAULT_CONFIG = {
-    target: 'normal',
-    chatPosition: 'overlay',
+    target: "normal",
+    chatPosition: "overlay",
     makeItNativeLike: true,
-    codeStyle: 'clean',
-    language: 'javascript'
   };
 
   const config = Object.assign({}, DEFAULT_CONFIG, userConfig);
 
   // Constants & Selectors
-  const STYLE_ELEMENT_ID = 'yt-native-theater-layout-styles';
-  const ATTR_NORMAL_THEATER = 'data-yt-native-theater-normal';
-  const WATCH_CONTAINERS = 'ytd-watch-flexy, ytd-watch-grid';
+  const ATTR_NORMAL_THEATER = "data-yt-native-theater-normal";
+  const WATCH_CONTAINERS = "ytd-watch-flexy, ytd-watch-grid";
 
   // State
   let isRunning = false;
@@ -33,132 +28,26 @@ function NativeLayoutNormalModeInTheater(userConfig) {
   let boundListeners = null;
 
   /**
-   * Namespaced CSS injected dynamically to normalize theater mode layout.
-   * Eliminates empty chat columns, resets grid tracks, and aligns #primary
-   * and #secondary into normal video proportions.
-   */
-  const INJECTED_CSS = `
-    /* === Native Normal Mode Theater Layout === */
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #full-bleed-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #full-bleed-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #player-full-bleed-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #player-full-bleed-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #player-theater-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #player-theater-container {
-      width: 100% !important;
-      max-width: 100% !important;
-      height: 100% !important;
-      flex: 1 1 100% !important;
-    }
-
-    /* Collapse and remove chat containers entirely from parent layout flow */
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #panels-full-bleed-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #panels-full-bleed-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #chat,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #chat,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #chat-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #chat-container,
-    html[${ATTR_NORMAL_THEATER}] ytd-live-chat-frame {
-      display: none !important;
-      width: 0 !important;
-      min-width: 0 !important;
-      max-width: 0 !important;
-      height: 0 !important;
-      min-height: 0 !important;
-      max-height: 0 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      border: none !important;
-      flex: 0 0 0 !important;
-      pointer-events: none !important;
-      visibility: hidden !important;
-    }
-
-    /* Reset CSS Grid variables so modern watch-grid doesn't reserve panel column tracks */
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] {
-      --ytd-watch-flexy-chat-width: 0px !important;
-      --ytd-watch-flexy-chat-max-height: 0px !important;
-    }
-
-    /* Normal watch-page two-column structure below theater player */
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #columns,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #columns {
-      display: flex !important;
-      flex-direction: row !important;
-      justify-content: center !important;
-      width: 100% !important;
-      max-width: var(--ytd-watch-flexy-max-horizontal-width, 1754px) !important;
-      margin: 0 auto !important;
-      padding-left: var(--ytd-margin-6x, 24px) !important;
-      padding-right: var(--ytd-margin-6x, 24px) !important;
-      box-sizing: border-box !important;
-    }
-
-    /* Primary column (video details, description, comments) */
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #primary,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #primary {
-      flex: 1 1 auto !important;
-      min-width: var(--ytd-watch-flexy-min-player-width, 360px) !important;
-      max-width: var(--ytd-watch-flexy-max-player-width, 1280px) !important;
-    }
-
-    /* Secondary column (recommendations) filling natural sidebar width */
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #secondary,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #secondary {
-      flex: 0 0 var(--ytd-watch-flexy-sidebar-width, 400px) !important;
-      width: var(--ytd-watch-flexy-sidebar-width, 400px) !important;
-      min-width: var(--ytd-watch-flexy-sidebar-min-width, 300px) !important;
-      padding-left: var(--ytd-margin-6x, 24px) !important;
-      box-sizing: border-box !important;
-    }
-
-    /* Ensure recommendations list fills secondary width without dead space */
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-flexy[theater] #secondary #related,
-    html[${ATTR_NORMAL_THEATER}] ytd-watch-grid[theater] #secondary #related {
-      display: block !important;
-      width: 100% !important;
-      margin-top: 0 !important;
-    }
-  `;
-
-  /**
-   * Injects the dedicated stylesheet idempotently.
-   */
-  function ensureStylesInjected() {
-    if (document.getElementById(STYLE_ELEMENT_ID)) return;
-    const styleEl = document.createElement('style');
-    styleEl.id = STYLE_ELEMENT_ID;
-    styleEl.textContent = INJECTED_CSS;
-    (document.head || document.documentElement).appendChild(styleEl);
-  }
-
-  /**
-   * Removes the injected stylesheet if present.
-   */
-  function removeInjectedStyles() {
-    const styleEl = document.getElementById(STYLE_ELEMENT_ID);
-    if (styleEl) {
-      styleEl.remove();
-    }
-  }
-
-  /**
    * Checks if current URL is a Shorts page.
    */
   function isShortsPage() {
-    return window.location.pathname.startsWith('/shorts/');
+    return window.location.pathname.startsWith("/shorts/");
   }
 
   /**
    * Checks if player is in fullscreen mode.
    */
   function isFullscreenActive() {
-    if (typeof isYouTubeFullscreen === 'function') {
+    if (typeof isYouTubeFullscreen === "function") {
       return isYouTubeFullscreen();
     }
-    const player = document.querySelector('.html5-video-player, #movie_player');
-    const isPlayerFs = Boolean(player && player.classList.contains('ytp-fullscreen'));
-    const isDocFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    const player = document.querySelector(".html5-video-player, #movie_player");
+    const isPlayerFs = Boolean(
+      player && player.classList.contains("ytp-fullscreen"),
+    );
+    const isDocFs = Boolean(
+      document.fullscreenElement || document.webkitFullscreenElement,
+    );
     return isPlayerFs || isDocFs;
   }
 
@@ -167,8 +56,11 @@ function NativeLayoutNormalModeInTheater(userConfig) {
    */
   function isTheaterActive() {
     if (isFullscreenActive()) return false;
+    if (typeof isYouTubeTheater === "function") {
+      return isYouTubeTheater();
+    }
     const watch = document.querySelector(WATCH_CONTAINERS);
-    return Boolean(watch && watch.hasAttribute('theater'));
+    return Boolean(watch && watch.hasAttribute("theater"));
   }
 
   /**
@@ -178,15 +70,21 @@ function NativeLayoutNormalModeInTheater(userConfig) {
   function isTargetVideo() {
     if (isShortsPage()) return false;
 
-    if (config.target === 'normal') {
+    if (config.target === "normal") {
       // Exclude live streams
-      if (typeof isYouTubeLiveNow === 'function' && isYouTubeLiveNow()) return false;
-      if (typeof isLiveBroadcast === 'function' && isLiveBroadcast()) return false;
+      if (typeof isYouTubeLiveNow === "function" && isYouTubeLiveNow())
+        return false;
+      if (typeof isLiveBroadcast === "function" && isLiveBroadcast())
+        return false;
       // Exclude replay archives
-      if (typeof hasArchiveReplaySignal === 'function' && hasArchiveReplaySignal()) return false;
-      if (typeof detectChatMode === 'function') {
+      if (
+        typeof hasArchiveReplaySignal === "function" &&
+        hasArchiveReplaySignal()
+      )
+        return false;
+      if (typeof detectChatMode === "function") {
         const mode = detectChatMode();
-        if (mode === 'live' || mode === 'archive') return false;
+        if (mode === "live" || mode === "archive") return false;
       }
     }
 
@@ -209,12 +107,10 @@ function NativeLayoutNormalModeInTheater(userConfig) {
       return;
     }
 
-    ensureStylesInjected();
-
     if (!document.documentElement.hasAttribute(ATTR_NORMAL_THEATER)) {
-      document.documentElement.setAttribute(ATTR_NORMAL_THEATER, 'true');
+      document.documentElement.setAttribute(ATTR_NORMAL_THEATER, "true");
       try {
-        window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event("resize"));
       } catch {}
     }
   }
@@ -226,7 +122,7 @@ function NativeLayoutNormalModeInTheater(userConfig) {
     if (document.documentElement.hasAttribute(ATTR_NORMAL_THEATER)) {
       document.documentElement.removeAttribute(ATTR_NORMAL_THEATER);
       try {
-        window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event("resize"));
       } catch {}
     }
   }
@@ -251,13 +147,13 @@ function NativeLayoutNormalModeInTheater(userConfig) {
     layoutObserver = new MutationObserver((mutations) => {
       let shouldCheck = false;
       for (const mutation of mutations) {
-        if (mutation.type === 'attributes') {
+        if (mutation.type === "attributes") {
           const attr = mutation.attributeName;
-          if (attr === 'theater' || attr === 'fullscreen' || attr === 'class') {
+          if (attr === "theater" || attr === "fullscreen" || attr === "class") {
             shouldCheck = true;
             break;
           }
-        } else if (mutation.type === 'childList') {
+        } else if (mutation.type === "childList") {
           shouldCheck = true;
           break;
         }
@@ -272,15 +168,15 @@ function NativeLayoutNormalModeInTheater(userConfig) {
     if (watch) {
       layoutObserver.observe(watch, {
         attributes: true,
-        attributeFilter: ['theater', 'fullscreen', 'class', 'style'],
-        childList: true
+        attributeFilter: ["theater", "fullscreen", "class", "style"],
+        childList: true,
       });
     }
 
-    // Also observe documentElement for theme/fullscreen/overlay attribute changes
+    // Also observe documentElement for fullscreen / overlay attribute changes
     layoutObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['fullscreen', 'data-yt-overlay-theater-active']
+      attributeFilter: ["fullscreen", "data-yt-overlay-theater-active"],
     });
   }
 
@@ -293,10 +189,10 @@ function NativeLayoutNormalModeInTheater(userConfig) {
     const onNav = () => scheduleUpdate();
     const onResize = () => scheduleUpdate();
 
-    window.addEventListener('yt-navigate-finish', onNav, { passive: true });
-    window.addEventListener('yt-page-data-updated', onNav, { passive: true });
-    window.addEventListener('popstate', onNav, { passive: true });
-    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener("yt-navigate-finish", onNav, { passive: true });
+    window.addEventListener("yt-page-data-updated", onNav, { passive: true });
+    window.addEventListener("popstate", onNav, { passive: true });
+    window.addEventListener("resize", onResize, { passive: true });
 
     boundListeners = { onNav, onResize };
   }
@@ -307,10 +203,10 @@ function NativeLayoutNormalModeInTheater(userConfig) {
   function removeEventListeners() {
     if (!boundListeners) return;
 
-    window.removeEventListener('yt-navigate-finish', boundListeners.onNav);
-    window.removeEventListener('yt-page-data-updated', boundListeners.onNav);
-    window.removeEventListener('popstate', boundListeners.onNav);
-    window.removeEventListener('resize', boundListeners.onResize);
+    window.removeEventListener("yt-navigate-finish", boundListeners.onNav);
+    window.removeEventListener("yt-page-data-updated", boundListeners.onNav);
+    window.removeEventListener("popstate", boundListeners.onNav);
+    window.removeEventListener("resize", boundListeners.onResize);
 
     boundListeners = null;
   }
@@ -322,7 +218,6 @@ function NativeLayoutNormalModeInTheater(userConfig) {
     if (isRunning) return;
     isRunning = true;
 
-    ensureStylesInjected();
     setupEventListeners();
     setupObserver();
     scheduleUpdate();
@@ -347,7 +242,6 @@ function NativeLayoutNormalModeInTheater(userConfig) {
 
     removeEventListeners();
     cleanLayout();
-    removeInjectedStyles();
   }
 
   return {
@@ -358,11 +252,11 @@ function NativeLayoutNormalModeInTheater(userConfig) {
     scheduleUpdate,
     shouldApplyLayout,
     isTargetVideo,
-    isTheaterActive
+    isTheaterActive,
   };
 }
 
 // Global expose for content script or external consumption
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.NativeLayoutNormalModeInTheater = NativeLayoutNormalModeInTheater;
 }
