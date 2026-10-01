@@ -1,10 +1,25 @@
 {
   "name": "youtube-live-chat-overlay",
   "version": "1.5.5",
+  "description": "Adds a live chat overlay to YouTube videos in fullscreen and theater mode",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
-    "lint": "npx web-ext lint --source-dir src",
-    "build": "npx web-ext build --source-dir src --artifacts-dir web-ext-artifacts --overwrite-dest",
-    "build:all": "npm run lint && npm run build"
+    "build": "node scripts/build.js",
+    "build:chrome": "node scripts/build.js chrome",
+    "build:firefox": "node scripts/build.js firefox",
+    "lint": "node scripts/lint.js && biome check .",
+    "format": "biome format --write .",
+    "test": "node scripts/lint.js",
+    "start": "web-ext run",
+    "start:chrome": "web-ext run -t chromium"
+  },
+  "author": "Muhammad Zaki",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "web-ext": "^10.1.0"
   }
 }

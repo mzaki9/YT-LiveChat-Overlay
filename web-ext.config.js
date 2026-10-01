@@ -1,5 +1,5 @@
 module.exports = {
-  sourceDir: "./",
+  sourceDir: "./src",
   artifactsDir: "./web-ext-artifacts",
   build: {
     overwriteDest: true,
@@ -7,11 +7,9 @@ module.exports = {
   ignoreFiles: [
     "package.json",
     "package-lock.json",
-    "web-ext-config.js",
     "node_modules",
     ".git",
     ".github",
-    "web-ext-artifacts",
     "*.log",
   ],
   run: {

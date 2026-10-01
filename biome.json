@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["src/js/**/*.js", "src/*.js", "package.json", "biome.json"]
+    "includes": [
+      "src/js/**/*.js",
+      "scripts/*.js",
+      "package.json",
+      "biome.json",
+      "web-ext.config.js"
+    ]
   },
   "formatter": {
     "enabled": true,

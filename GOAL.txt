@@ -1,177 +1,431 @@
 ```text
-refactor(codebase)
-  |> understand()
-  |> identify(responsibilities)
-  |> identify(dependencies)
-  |> identify(side_effects)
-  |> identify(shared_state)
-  |> identify(duplication)
-  |> identify(unnecessary_abstractions)
+tidy(codebase)
+  |> inspect()
+  |> identify(duplicate_configuration)
+  |> identify(duplicate_dependencies)
+  |> identify(duplicate_build_systems)
+  |> identify(duplicate_entrypoints)
+  |> identify(dead_files)
+  |> identify(dead_code)
+  |> identify(unused_dependencies)
+  |> identify(unused_scripts)
+  |> identify(unnecessary_config)
+  |> identify(unnecessary_directories)
+  |> identify(legacy_artifacts)
 
-  |> transform(
-       code =>
-         code
-           |> simplify()
-           |> separate(concerns)
-           |> isolate(side_effects)
-           |> make_dependencies_explicit()
-           |> reduce(coupling)
-           |> reduce(shared_state)
-           |> improve(data_flow)
-           |> improve(composability)
-           |> improve(testability)
+  |> consolidate(
+       package_managers,
+       package_manifests,
+       build_configuration,
+       compiler_configuration,
+       lint_configuration,
+       formatter_configuration,
+       test_configuration,
+       environment_configuration,
+       entrypoints
+     )
+
+  |> enforce(
+       one(package_json),
+       one(package_manager),
+       one(build_system),
+       one(primary_entrypoint),
+       one(source_structure)
+     )
+
+  |> remove(
+       unused_files,
+       unused_dependencies,
+       unused_scripts,
+       duplicate_config,
+       obsolete_config,
+       generated_artifacts,
+       temporary_files,
+       abandoned_implementations,
+       legacy_files
+     )
+
+  |> simplify(
+       directory_structure,
+       scripts,
+       configuration,
+       dependencies,
+       build_process
      )
 
   |> preserve(
-       behavior,
+       functionality,
        public_api,
-       contracts,
-       functionality
+       runtime_behavior,
+       required_configuration
+     )
+
+  |> verify(
+       install,
+       build,
+       test,
+       lint
+     )
+
+  |> output(clean_repository)
+```
+
+### Repository Invariants
+
+```text
+repository
+  |> require(
+       exactly_one(package_json),
+       exactly_one(lockfile),
+       exactly_one(build_pipeline),
+       exactly_one(primary_source_root),
+       exactly_one(primary_entrypoint)
      )
 
   |> reject(
-       unnecessary_abstractions,
-       unnecessary_rewrites,
-       clever_code,
-       premature_optimization,
-       forced_functional_syntax
+       duplicate_package_manifests,
+       duplicate_lockfiles,
+       multiple_build_systems,
+       competing_configurations,
+       abandoned_source_trees,
+       unused_dependencies,
+       dead_files
+     )
+```
+
+### Package Management
+
+```text
+dependencies
+  |> inspect()
+  |> remove(unused)
+  |> deduplicate()
+  |> consolidate()
+
+package_management
+  |> use(one_package_json)
+  |> use(one_package_manager)
+  |> use(one_lockfile)
+
+do_not:
+    create_additional_package_json()
+    keep_old_package_json()
+    keep_duplicate_lockfiles()
+    keep_multiple_dependency_manifests()
+```
+
+### Build System
+
+```text
+build
+  |> identify(all_build_tools)
+  |> choose(existing_canonical_build)
+  |> remove(redundant_build_tools)
+  |> remove(duplicate_build_scripts)
+  |> remove(legacy_build_configuration)
+  |> expose(one_clear_build_command)
+```
+
+The repository should have a simple mental model:
+
+```text
+install()
+    |> dependencies()
+
+build()
+    |> source()
+    |> compiler()
+    |> output()
+
+test()
+    |> source()
+
+lint()
+    |> source()
+```
+
+Avoid multiple ways of doing the same thing.
+
+```text
+build()
+build:legacy()
+build:old()
+build:v2()
+build:dev()
+build:production()
+```
+
+should not exist unless each command has a **real and documented purpose**.
+
+---
+
+### Configuration
+
+```text
+configuration
+  |> find(all_config_files)
+  |> classify(required, duplicate, obsolete)
+  |> consolidate()
+  |> remove(obsolete)
+```
+
+Prefer:
+
+```text
+one source of truth
+```
+
+over:
+
+```text
+config/
+config.old/
+config.backup/
+config.local/
+config.new/
+config.final/
+```
+
+Do not preserve configuration merely because it already exists.
+
+If two configurations serve the same purpose:
+
+```text
+choose(canonical)
+  |> migrate(required_settings)
+  |> delete(duplicate)
+```
+
+---
+
+### Files
+
+```text
+files
+  |> inspect()
+  |> classify(
+       required,
+       referenced,
+       generated,
+       unused,
+       obsolete,
+       duplicate
      )
 
-  |> prefer(
-       clarity,
-       simplicity,
-       explicit_dependencies,
-       cohesive_modules,
-       predictable_behavior
+  |> keep(
+       required,
+       referenced
      )
 
-  |> validate(
-       correctness,
-       regressions,
-       maintainability
+  |> remove(
+       unused,
+       obsolete,
+       duplicate
      )
-
-  |> output(clean_code)
 ```
 
-### Refactoring Rules
+Before deleting a file:
 
 ```text
-function refactor(module):
+if referenced(file):
+    keep(file)
 
-    module
-      |> understand_before_modify()
-      |> preserve_existing_behavior()
+if generated(file):
+    keep_only_if_required_by_workflow()
 
-      |> when(code.is_complex()):
-           simplify()
+if unused(file):
+    delete(file)
 
-      |> when(code.has_multiple_responsibilities()):
-           separate_responsibilities()
-
-      |> when(code.has_hidden_dependencies()):
-           make_dependencies_explicit()
-
-      |> when(code.has_shared_state()):
-           reduce_shared_state()
-
-      |> when(code.has_side_effects()):
-           isolate_side_effects()
-
-      |> when(code.has_duplication()):
-           extract_shared_logic()
-
-      |> when(code.has_unnecessary_abstraction()):
-           remove_abstraction()
-
-      |> when(code.is_hard_to_test()):
-           isolate_logic()
-
-      |> when(code.is_hard_to_reason_about()):
-           simplify_data_flow()
-
-      |> when(abstraction.does_not_reduce_complexity()):
-           delete(abstraction)
-
-      |> return()
+if duplicate(file):
+    consolidate_then_delete(file)
 ```
 
-### Core Principle
+Do not keep files "just in case".
+
+---
+
+### Directory Structure
 
 ```text
-functional_principles
-    |> use_as(design_philosophy)
-    |> not_as(syntax_constraint)
-
-think(functionally)
-write(idiomatically)
-preserve(behavior)
-minimize(complexity)
-maximize(clarity)
+directories
+  |> remove(empty)
+  |> remove(duplicate_responsibilities)
+  |> merge(similar_purposes)
+  |> simplify()
 ```
 
-### Decision Function
+Avoid structures such as:
 
 ```text
-choose(current, proposed):
-
-    proposed
-      |> if(simpler_than(current))
-      |> and(if(easier_to_reason_about(current)))
-      |> and(if(preserves_behavior(current)))
-      |> and(if(reduces_coupling(current)))
-      |> then(accept)
-      |> else(keep_current)
+src/
+src-old/
+src-new/
+src-v2/
+legacy/
+backup/
+tmp/
+temp/
 ```
 
-### Final Constraint
+unless they have an explicit purpose.
+
+There should be **one canonical implementation**.
+
+---
+
+### Scripts
 
 ```text
-DO NOT:
-
-    rewrite_everything()
-    force_pure_functions()
-    eliminate_all_mutation()
-    replace_every_loop_with_map()
-    introduce_functional_libraries()
-    introduce_monads()
-    introduce_currying()
-    create_abstractions_without_need()
-    optimize_without_evidence()
-
-DO:
-
-    understand()
-    simplify()
-    compose()
-    isolate()
-    separate()
-    make_explicit()
-    reduce_coupling()
-    preserve_behavior()
-    remove_unnecessary_complexity()
+scripts
+  |> inspect()
+  |> identify(duplicates)
+  |> identify(dead_scripts)
+  |> identify(unclear_scripts)
+  |> remove(dead)
+  |> merge(duplicates)
+  |> rename(unclear)
 ```
 
-The objective is:
+Prefer:
 
 ```text
-good_refactor =
-    simpler
-    + clearer
-    + more_composable
-    + more_testable
-    + less_coupled
-    + predictable
-    + behavior_preserved
+dev
+build
+test
+lint
+format
 ```
+
+over a large collection of scripts that perform overlapping tasks.
+
+---
+
+### Dead Code
 
 ```text
-refactor(codebase)
-    |> make_simple()
-    |> make_explicit()
-    |> make_composable()
-    |> make_reasonable()
-    |> preserve_behavior()
-```
+codebase
+  |> find(unreachable_code)
+  |> find(unused_exports)
+  |> find(unused_functions)
+  |> find(unused_types)
+  |> find(commented_out_code)
+  |> find(legacy_implementations)
+  |> remove()
 ```
 
+Do not keep commented-out implementations as historical backups.
+
+Use version control for history.
+
+```text
+git = history
+codebase = current_truth
+```
+
+---
+
+### Duplicate Implementations
+
+```text
+when(similar_implementations_exist):
+
+    compare(implementations)
+      |> identify(canonical)
+      |> migrate(required_behavior)
+      |> delete(redundant_implementation)
+```
+
+Do not maintain:
+
+```text
+foo()
+fooV2()
+newFoo()
+legacyFoo()
+fooNew()
+```
+
+when they represent the same responsibility.
+
+There should be one obvious implementation.
+
+---
+
+### Cleanup Principle
+
+```text
+tidy(codebase)
+  |> reduce(number_of_files)
+  |> reduce(number_of_dependencies)
+  |> reduce(number_of_configurations)
+  |> reduce(number_of_build_paths)
+  |> reduce(number_of_entrypoints)
+  |> reduce(number_of_ways_to_do_the_same_thing)
+```
+
+But:
+
+```text
+less_files != better
+less_dependencies != better
+less_abstraction != better
+```
+
+Only remove something when it is:
+
+```text
+unused
+duplicate
+obsolete
+redundant
+unnecessary
+```
+
+---
+
+### Safety
+
+```text
+before(remove(file)):
+    verify(not_required)
+
+before(remove(dependency)):
+    verify(not_imported)
+    verify(not_used_by_scripts)
+    verify(not_required_at_runtime)
+
+before(remove(config)):
+    verify(not_referenced)
+
+before(merge(build_system)):
+    verify(build_output_equivalent)
+
+after(tidy):
+    run(install)
+    run(build)
+    run(test)
+    run(lint)
+```
+
+Never delete something merely because it *looks* unused without checking its references and tooling usage.
+
+---
+
+### Final State
+
+The desired repository should satisfy:
+
+```text
+clean(codebase)
+    =
+    one_package_manifest
+    + one_package_manager
+    + one_lockfile
+    + one_build_system
+    + one_canonical_source
+    + one_clear_entrypoint
+    + no_dead_files
+    + no_dead_dependencies
+    + no_duplicate_configuration
+    + no_duplicate_implementation
+    + no_legacy
